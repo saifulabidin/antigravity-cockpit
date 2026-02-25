@@ -252,13 +252,35 @@ export class DashboardProvider {
         const accountsJson = JSON.stringify(accountsData);
         const groupsJson = JSON.stringify(groupsConfig);
 
+        // Generate webview URIs for local CSS/JS assets
+        const styleUri = this._panel.webview.asWebviewUri(
+            vscode.Uri.file(path.join(this._extensionUri.fsPath, 'media', 'style.css'))
+        );
+        const scriptUri = this._panel.webview.asWebviewUri(
+            vscode.Uri.file(path.join(this._extensionUri.fsPath, 'media', 'script.js'))
+        );
+
         // Read the external HTML template
         const htmlPath = vscode.Uri.file(path.join(this._extensionUri.fsPath, 'media', 'dashboard.html')).fsPath;
         let html = fs.readFileSync(htmlPath, 'utf8');
 
-        // Inject data via placeholder replacement
-        html = html.replace('/*{{ACCOUNTS_JSON}}*/[]', accountsJson);
-        html = html.replace('/*{{GROUPS_JSON}}*/{}', groupsJson);
+        // Read the JS file and inject data into it
+        const jsPath = vscode.Uri.file(path.join(this._extensionUri.fsPath, 'media', 'script.js')).fsPath;
+        let jsContent = fs.readFileSync(jsPath, 'utf8');
+        jsContent = jsContent.replace('/*{{ACCOUNTS_JSON}}*/[]', accountsJson);
+        jsContent = jsContent.replace('/*{{GROUPS_JSON}}*/{}', groupsJson);
+
+        // Write the JS with injected data to a temp file that the webview can load
+        const scriptOutPath = path.join(this._extensionUri.fsPath, 'media', 'script.gen.js');
+        fs.writeFileSync(scriptOutPath, jsContent, 'utf8');
+
+        const scriptGenUri = this._panel.webview.asWebviewUri(
+            vscode.Uri.file(scriptOutPath)
+        );
+
+        // Replace asset placeholders in HTML
+        html = html.replace('{{STYLE_URI}}', styleUri.toString());
+        html = html.replace('{{SCRIPT_URI}}', scriptGenUri.toString());
 
         return html;
     }
