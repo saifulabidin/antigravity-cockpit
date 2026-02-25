@@ -144,13 +144,13 @@ export class AccountManager {
 
             const quotaInfo = modelInfo.quotaInfo || {};
 
-            // 将 UTC 时间转换为本地时区显示格式
+            // Mengonversi waktu UTC ke zona waktu lokal
             let localResetTime = '';
             if (quotaInfo.resetTime) {
                 try {
                     const resetDate = new Date(quotaInfo.resetTime);
-                    // 使用 zh-CN locale 格式化为本地时间
-                    localResetTime = resetDate.toLocaleString('zh-CN', {
+                    // Menggunakan locale id-ID untuk memformat waktu lokal
+                    localResetTime = resetDate.toLocaleString('id-ID', {
                         month: '2-digit',
                         day: '2-digit',
                         hour: '2-digit',
@@ -158,7 +158,7 @@ export class AccountManager {
                         hour12: false
                     });
                 } catch (e) {
-                    localResetTime = quotaInfo.resetTime; // 格式化失败时保留原值
+                    localResetTime = quotaInfo.resetTime; // Pertahankan nilai asli jika formatting gagal
                 }
             }
 
@@ -166,7 +166,7 @@ export class AccountManager {
                 name,
                 percentage: Math.round((quotaInfo.remainingFraction || 0) * 100),
                 reset_time: localResetTime,
-                reset_time_raw: quotaInfo.resetTime || "" // 保留原始 UTC 时间供 tooltip 计算使用
+                reset_time_raw: quotaInfo.resetTime || "" // Menyimpan waktu asli UTC untuk perhitungan tooltip
             });
         }
 

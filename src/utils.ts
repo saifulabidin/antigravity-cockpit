@@ -1,3 +1,4 @@
+/* eslint-disable no-constant-condition */
 export function encodeVarint(value: number): Buffer {
     const buf: number[] = [];
     let v = value;

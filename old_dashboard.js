@@ -1,241 +1,215 @@
-/* eslint-disable no-case-declarations */
-import * as vscode from 'vscode';
-import { AccountManager, Account } from './accountManager';
-import { ModelGroupManager, ModelGroup, ModelGroupsConfig, ModelInfo } from './modelGroupManager';
-
-export class DashboardProvider {
-    public static readonly viewType = 'antigravityDashboard';
-    private static _currentPanel: DashboardProvider | undefined;
-
-    private readonly _panel: vscode.WebviewPanel;
-    private readonly _extensionUri: vscode.Uri;
-    private _disposables: vscode.Disposable[] = [];
-
-    public static createOrShow(extensionUri: vscode.Uri) {
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DashboardProvider = void 0;
+const vscode = __importStar(require("vscode"));
+const accountManager_1 = require("./accountManager");
+const modelGroupManager_1 = require("./modelGroupManager");
+class DashboardProvider {
+    static createOrShow(extensionUri) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
-
         if (DashboardProvider._currentPanel) {
             DashboardProvider._currentPanel._panel.reveal(column);
             return;
         }
-
-        const panel = vscode.window.createWebviewPanel(
-            DashboardProvider.viewType,
-            'Antigravity Multi-Account Cockpit',
-            column || vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [extensionUri]
-            }
-        );
-
+        const panel = vscode.window.createWebviewPanel(DashboardProvider.viewType, 'Antigravity Multi-Account Cockpit', column || vscode.ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            localResourceRoots: [extensionUri]
+        });
         DashboardProvider._currentPanel = new DashboardProvider(panel, extensionUri);
     }
-
-    public static refresh() {
+    static refresh() {
         if (DashboardProvider._currentPanel) {
             DashboardProvider._currentPanel._update();
         }
     }
-
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    constructor(panel, extensionUri) {
+        this._disposables = [];
         this._panel = panel;
         this._extensionUri = extensionUri;
-
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-        this._panel.webview.onDidReceiveMessage(
-            async message => {
-                switch (message.command) {
-                    case 'switch':
-                        await vscode.commands.executeCommand('antigravity-cockpit.switchAccount', { accountId: message.accountId, email: message.email });
-                        this._update();
-                        return;
-                    case 'refresh':
-                        await vscode.commands.executeCommand('antigravity-cockpit.refreshAccount', message.accountId);
-                        this._update();
-                        return;
-                    case 'refreshAll':
-                        await vscode.commands.executeCommand('antigravity-cockpit.refreshAllAccounts');
-                        this._update();
-                        return;
-                    case 'addAccount':
-                        await vscode.commands.executeCommand('antigravity-cockpit.addAccount');
-                        this._update();
-                        return;
-                    case 'delete':
-                        await vscode.commands.executeCommand('antigravity-cockpit.deleteAccount', { accountId: message.accountId, email: message.email });
-                        return;
-
-                    // === Command terkait manajemen grup ===
-                    case 'getGroupsConfig':
-                        // Mendapatkan konfigurasi grup saat ini
-                        const config = ModelGroupManager.loadGroups();
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: config
-                        });
-                        return;
-
-                    case 'autoGroup':
-                        // Pengelompokan otomatis
-                        const models: ModelInfo[] = message.models || [];
-                        const autoGroups = ModelGroupManager.autoGroup(models);
-                        const autoConfig = ModelGroupManager.loadGroups();
-                        autoConfig.groups = autoGroups;
-                        autoConfig.lastAutoGrouped = Date.now();
-                        ModelGroupManager.saveGroups(autoConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: autoConfig
-                        });
-                        vscode.commands.executeCommand('antigravity-cockpit.refreshStatusBar');
-                        vscode.window.showInformationMessage(`Berhasil membuat otomatis ${autoGroups.length} grup`);
-                        return;
-
-                    case 'addGroup':
-                        // Tambah grup baru
-                        let addConfig = ModelGroupManager.loadGroups();
-                        const newGroup = ModelGroupManager.createGroup(message.groupName || 'Grup Baru');
-                        addConfig = ModelGroupManager.addGroup(addConfig, newGroup);
-                        ModelGroupManager.saveGroups(addConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: addConfig
-                        });
-                        return;
-
-                    case 'deleteGroup':
-                        // Hapus grup
-                        let deleteConfig = ModelGroupManager.loadGroups();
-                        deleteConfig = ModelGroupManager.deleteGroup(deleteConfig, message.groupId);
-                        ModelGroupManager.saveGroups(deleteConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: deleteConfig
-                        });
-                        return;
-
-                    case 'updateGroupName':
-                        // Perbarui nama grup
-                        let renameConfig = ModelGroupManager.loadGroups();
-                        renameConfig = ModelGroupManager.updateGroup(renameConfig, message.groupId, { name: message.newName });
-                        ModelGroupManager.saveGroups(renameConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: renameConfig
-                        });
-                        return;
-
-                    case 'addModelToGroup':
-                        // Tambahkan model ke grup
-                        let addModelConfig = ModelGroupManager.loadGroups();
-                        addModelConfig = ModelGroupManager.addModelToGroup(addModelConfig, message.groupId, message.modelName);
-                        ModelGroupManager.saveGroups(addModelConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: addModelConfig
-                        });
-                        return;
-
-                    case 'removeModelFromGroup':
-                        // Hapus model dari grup
-                        let removeModelConfig = ModelGroupManager.loadGroups();
-                        removeModelConfig = ModelGroupManager.removeModelFromGroup(removeModelConfig, message.groupId, message.modelName);
-                        ModelGroupManager.saveGroups(removeModelConfig);
-                        this._panel.webview.postMessage({
-                            command: 'groupsConfig',
-                            config: removeModelConfig
-                        });
-                        return;
-
-                    case 'saveGroups':
-                        // Menyimpan langsung konfigurasi grup secara utuh
-                        ModelGroupManager.saveGroups(message.config);
-                        vscode.commands.executeCommand('antigravity-cockpit.refreshStatusBar');
-                        vscode.window.showInformationMessage('Konfigurasi grup berhasil disimpan');
-                        return;
-
-                    case 'getRefreshInterval':
-                        // Mendapatkan konfigurasi interval refresh saat ini
-                        const currentConfig = vscode.workspace.getConfiguration('antigravity-cockpit');
-                        const currentInterval = currentConfig.get<number>('autoRefreshInterval', 5);
-                        this._panel.webview.postMessage({
-                            command: 'refreshIntervalValue',
-                            value: currentInterval
-                        });
-                        return;
-
-                    case 'setRefreshInterval':
-                        // Mengatur interval refresh
-                        const newInterval = message.value;
-                        vscode.workspace.getConfiguration('antigravity-cockpit').update(
-                            'autoRefreshInterval',
-                            newInterval,
-                            vscode.ConfigurationTarget.Global
-                        );
-                        return;
-                }
-            },
-            null,
-            this._disposables
-        );
+        this._panel.webview.onDidReceiveMessage(async (message) => {
+            switch (message.command) {
+                case 'switch':
+                    await vscode.commands.executeCommand('antigravity-cockpit.switchAccount', { accountId: message.accountId, email: message.email });
+                    this._update();
+                    return;
+                case 'refresh':
+                    await vscode.commands.executeCommand('antigravity-cockpit.refreshAccount', message.accountId);
+                    this._update();
+                    return;
+                case 'refreshAll':
+                    await vscode.commands.executeCommand('antigravity-cockpit.refreshAllAccounts');
+                    this._update();
+                    return;
+                case 'addAccount':
+                    await vscode.commands.executeCommand('antigravity-cockpit.addAccount');
+                    this._update();
+                    return;
+                case 'delete':
+                    await vscode.commands.executeCommand('antigravity-cockpit.deleteAccount', { accountId: message.accountId, email: message.email });
+                    return;
+                // === 分组管理相关命令 ===
+                case 'getGroupsConfig':
+                    // 获取当前分组配置
+                    const config = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: config
+                    });
+                    return;
+                case 'autoGroup':
+                    // 自动分组
+                    const models = message.models || [];
+                    const autoGroups = modelGroupManager_1.ModelGroupManager.autoGroup(models);
+                    let autoConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    autoConfig.groups = autoGroups;
+                    autoConfig.lastAutoGrouped = Date.now();
+                    modelGroupManager_1.ModelGroupManager.saveGroups(autoConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: autoConfig
+                    });
+                    vscode.commands.executeCommand('antigravity-cockpit.refreshStatusBar');
+                    vscode.window.showInformationMessage(`已自动创建 ${autoGroups.length} 个分组`);
+                    return;
+                case 'addGroup':
+                    // 添加新分组
+                    let addConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    const newGroup = modelGroupManager_1.ModelGroupManager.createGroup(message.groupName || '新分组');
+                    addConfig = modelGroupManager_1.ModelGroupManager.addGroup(addConfig, newGroup);
+                    modelGroupManager_1.ModelGroupManager.saveGroups(addConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: addConfig
+                    });
+                    return;
+                case 'deleteGroup':
+                    // 删除分组
+                    let deleteConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    deleteConfig = modelGroupManager_1.ModelGroupManager.deleteGroup(deleteConfig, message.groupId);
+                    modelGroupManager_1.ModelGroupManager.saveGroups(deleteConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: deleteConfig
+                    });
+                    return;
+                case 'updateGroupName':
+                    // 更新分组名称
+                    let renameConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    renameConfig = modelGroupManager_1.ModelGroupManager.updateGroup(renameConfig, message.groupId, { name: message.newName });
+                    modelGroupManager_1.ModelGroupManager.saveGroups(renameConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: renameConfig
+                    });
+                    return;
+                case 'addModelToGroup':
+                    // 向分组添加模型
+                    let addModelConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    addModelConfig = modelGroupManager_1.ModelGroupManager.addModelToGroup(addModelConfig, message.groupId, message.modelName);
+                    modelGroupManager_1.ModelGroupManager.saveGroups(addModelConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: addModelConfig
+                    });
+                    return;
+                case 'removeModelFromGroup':
+                    // 从分组移除模型
+                    let removeModelConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+                    removeModelConfig = modelGroupManager_1.ModelGroupManager.removeModelFromGroup(removeModelConfig, message.groupId, message.modelName);
+                    modelGroupManager_1.ModelGroupManager.saveGroups(removeModelConfig);
+                    this._panel.webview.postMessage({
+                        command: 'groupsConfig',
+                        config: removeModelConfig
+                    });
+                    return;
+                case 'saveGroups':
+                    // 直接保存完整分组配置
+                    modelGroupManager_1.ModelGroupManager.saveGroups(message.config);
+                    vscode.commands.executeCommand('antigravity-cockpit.refreshStatusBar');
+                    vscode.window.showInformationMessage('分组配置已保存');
+                    return;
+                case 'getRefreshInterval':
+                    // 获取当前刷新间隔配置
+                    const currentConfig = vscode.workspace.getConfiguration('antigravity-cockpit');
+                    const currentInterval = currentConfig.get('autoRefreshInterval', 5);
+                    this._panel.webview.postMessage({
+                        command: 'refreshIntervalValue',
+                        value: currentInterval
+                    });
+                    return;
+                case 'setRefreshInterval':
+                    // 设置刷新间隔
+                    const newInterval = message.value;
+                    vscode.workspace.getConfiguration('antigravity-cockpit').update('autoRefreshInterval', newInterval, vscode.ConfigurationTarget.Global);
+                    return;
+            }
+        }, null, this._disposables);
     }
-
-    public async refresh() {
+    async refresh() {
         this._update();
     }
-
-    public dispose() {
+    dispose() {
         DashboardProvider._currentPanel = undefined;
         this._panel.dispose();
         while (this._disposables.length) {
             const x = this._disposables.pop();
-            if (x) { (x as any).dispose(); }
-        }
-    }
-
-    private async _update() {
-        try {
-            this._panel.webview.html = await this._getHtmlForWebview();
-        } catch (e) {
-            console.error('Failed to generate webview HTML:', e);
-            this._panel.webview.html = `<!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Error</title>
-                <style>
-                    body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-editorError-foreground); }
-                </style>
-            </head>
-            <body>
-                <h2>An error occurred while loading the dashboard</h2>
-                <pre>${(e as Error).message}</pre>
-            </body>
-            </html>`;
-        }
-    }
-
-    private async _getHtmlForWebview() {
-        const index = AccountManager.loadIndex();
-        const groupsConfig = ModelGroupManager.loadGroups();
-        let accountsData = await Promise.all(index.accounts.map(async acc => {
-            const fullAcc = AccountManager.loadAccount(acc.id);
-            if (!fullAcc) {
-                console.warn(`[DashboardProvider] Account ${acc.id} returned null. Skipping...`);
-                return null;
+            if (x) {
+                x.dispose();
             }
+        }
+    }
+    async _update() {
+        this._panel.webview.html = await this._getHtmlForWebview();
+    }
+    async _getHtmlForWebview() {
+        const index = accountManager_1.AccountManager.loadIndex();
+        const groupsConfig = modelGroupManager_1.ModelGroupManager.loadGroups();
+        const accountsData = await Promise.all(index.accounts.map(async (acc) => {
+            const fullAcc = accountManager_1.AccountManager.loadAccount(acc.id);
             let quota = null;
             if (fullAcc.token) {
                 try {
-                    quota = await AccountManager.fetchQuota(fullAcc.token.access_token);
-                } catch (e) { }
+                    quota = await accountManager_1.AccountManager.fetchQuota(fullAcc.token.access_token);
+                }
+                catch (e) { }
             }
             return {
                 ...fullAcc,
@@ -243,13 +217,8 @@ export class DashboardProvider {
                 isCurrent: acc.id === index.current_account_id
             };
         }));
-
-        // Filter out any null accounts (those that failed to load)
-        accountsData = accountsData.filter(a => a !== null);
-
         const accountsJson = JSON.stringify(accountsData);
         const groupsJson = JSON.stringify(groupsConfig);
-
         return `<!DOCTYPE html>
             <html lang="en">
             <head>
@@ -868,80 +837,80 @@ export class DashboardProvider {
                             <h1>Antigravity Multi-Account Cockpit</h1>
                         </div>
                         <div class="view-toggle">
-                            <div class="view-toggle-btn active" id="btnViewTab" onclick="switchView('tab')">Tampilan Kartu</div>
-                            <div class="view-toggle-btn" id="btnViewList" onclick="switchView('list')">Tampilan Daftar</div>
+                            <div class="view-toggle-btn active" id="btnViewTab" onclick="switchView('tab')">卡片视图</div>
+                            <div class="view-toggle-btn" id="btnViewList" onclick="switchView('list')">列表视图</div>
                         </div>
                     </div>
                     
                     <div class="header-bottom-row">
                         <div class="header-actions">
-                            <button class="teal" onclick="openGroupManager()">Manajemen Grup</button>
-                            <button class="blue" onclick="addAccount()">Tambah Akun</button>
-                            <button class="secondary" onclick="refreshAll()">Refresh Semua</button>
+                            <button class="teal" onclick="openGroupManager()">分组管理</button>
+                            <button class="blue" onclick="addAccount()">添加账号</button>
+                            <button class="secondary" onclick="refreshAll()">刷新所有</button>
                         </div>
                         <div class="header-actions">
                             <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);">
-                                Interval:
+                                间隔:
                                 <select id="refreshIntervalSelect" onchange="updateRefreshInterval()" style="padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border-color);background:var(--vscode-input-background);color:var(--vscode-input-foreground);outline:none;">
-                                    <option value="1">1 menit</option>
-                                    <option value="2">2 menit</option>
-                                    <option value="5">5 menit</option>
-                                    <option value="10">10 menit</option>
-                                    <option value="15">15 menit</option>
-                                    <option value="30">30 menit</option>
-                                    <option value="60">60 menit</option>
+                                    <option value="1">1分钟</option>
+                                    <option value="2">2分钟</option>
+                                    <option value="5">5分钟</option>
+                                    <option value="10">10分钟</option>
+                                    <option value="15">15分钟</option>
+                                    <option value="30">30分钟</option>
+                                    <option value="60">60分钟</option>
                                 </select>
                             </label>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Wadah Tampilan Kartu -->
+                <!-- 卡片视图容器 -->
                 <div id="tabViewContainer">
                     <div class="tabs" id="tabContainer"></div>
                     <div id="panelContainer"></div>
                 </div>
 
-                <!-- Wadah Tampilan Daftar -->
+                <!-- 列表视图容器 -->
                 <div id="listViewContainer" class="list-view">
                     <table class="account-table">
                         <thead>
                             <tr>
                                 <th style="width: 24px;">#</th>
-                                <th>Akun (Email)</th>
-                                <th>Nama</th>
-                                <th>Tingkat</th>
-                                <th>Terakhir Aktif</th>
-                                <th style="text-align: right; width: 140px;">Aksi</th>
+                                <th>账号 (Email)</th>
+                                <th>姓名</th>
+                                <th>层级</th>
+                                <th>最后活跃</th>
+                                <th style="text-align: right; width: 140px;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="accountTableBody">
-                            <!-- Dibuat secara dinamis -->
+                            <!-- 动态生成 -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Popup Manajemen Grup -->
+                <!-- 分组管理弹窗 -->
                 <div class="modal-overlay" id="groupModal">
                     <div class="modal">
                         <div class="modal-header">
-                            <h2>Manajemen Grup</h2>
+                            <h2>分组管理</h2>
                             <button class="modal-close" onclick="closeGroupManager()">&times;</button>
                         </div>
                         <div class="modal-body">
                             <div class="action-buttons">
-                                <button class="teal" onclick="autoGroup()">Pengelompokan Otomatis</button>
-                                <button class="secondary" onclick="addNewGroup()">Tambah Grup</button>
+                                <button class="teal" onclick="autoGroup()">自动分组</button>
+                                <button class="secondary" onclick="addNewGroup()">添加分组</button>
                             </div>
                             
-                            <div class="groups-section-title">Daftar Grup</div>
+                            <div class="groups-section-title">分组列表</div>
                             <div class="groups-list" id="groupsList">
-                                <!-- Daftar grup dirender secara dinamis -->
+                                <!-- 分组列表动态渲染 -->
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="secondary" onclick="closeGroupManager()">Batal</button>
-                            <button class="blue" onclick="saveGroups()">Simpan Grup</button>
+                            <button class="secondary" onclick="closeGroupManager()">取消</button>
+                            <button class="blue" onclick="saveGroups()">保存分组</button>
                         </div>
                     </div>
                 </div>
@@ -953,16 +922,16 @@ export class DashboardProvider {
                     const accounts = ${accountsJson};
                     let groupsConfig = ${groupsJson};
                     
-                    // Utamakan penggunaan activeAccountId di state, mencegah perubahan setelah refresh
+                    // 优先使用 state 中的 activeAccountId，防止刷新后跳变
                     let activeAccountId = state.activeAccountId;
-                    // Verifikasi apakah ID masih valid (mencegah akun yang dihapus tetap berada di ID yang tidak valid)
+                    // 验证 ID 是否依然有效 (防止账号被删除后停留在无效 ID)
                     if (!activeAccountId || !accounts.find(a => a.id === activeAccountId)) {
                         activeAccountId = accounts.find(a => a.isCurrent)?.id || accounts[0]?.id;
                     }
 
                     let activeDropdownId = null;
 
-                    // Mendapatkan semua model yang tersedia
+                    // 获取所有可用模型
                     function getAllModels() {
                         const models = [];
                         accounts.forEach(acc => {
@@ -981,7 +950,7 @@ export class DashboardProvider {
                         return models;
                     }
 
-                    // Dapatkan koleksi model yang dikelompokkan
+                    // 获取已分组的模型集合
                     function getGroupedModels() {
                         const grouped = new Set();
                         groupsConfig.groups.forEach(g => {
@@ -990,14 +959,14 @@ export class DashboardProvider {
                         return grouped;
                     }
 
-                    // Perbarui interval refresh
+                    // 更新刷新间隔
                     function updateRefreshInterval() {
                         const select = document.getElementById('refreshIntervalSelect');
                         const value = parseInt(select.value, 10);
                         vscode.postMessage({ command: 'setRefreshInterval', value: value });
                     }
 
-                    // Memantau pesan dari ekstensi
+                    // 监听来自扩展的消息
                     window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.command === 'groupsConfig') {
@@ -1011,7 +980,7 @@ export class DashboardProvider {
                         }
                     });
 
-                    // Mendapatkan interval refresh saat inisialisasi
+                    // 初始化时获取刷新间隔
                     vscode.postMessage({ command: 'getRefreshInterval' });
 
                     function switchView(view) {
@@ -1053,7 +1022,7 @@ export class DashboardProvider {
                         tbody.innerHTML = '';
 
                         if (accounts.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">Belum ada akun, silakan klik tombol di kanan atas untuk menambahkan.</td></tr>';
+                            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">暂无账号，请点击右上角添加。</td></tr>';
                             return;
                         }
 
@@ -1062,10 +1031,10 @@ export class DashboardProvider {
                             if (acc.isCurrent) tr.className = 'current-account';
 
                             const lastUsedDate = new Date(acc.last_used);
-                            const lastUsedStr = lastUsedDate.toLocaleString('id-ID', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                            const lastUsedStr = lastUsedDate.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
                             
                             const statusDotClass = acc.isCurrent ? 'active' : 'inactive';
-                            const statusTitle = acc.isCurrent ? 'Saat ini aktif' : 'Tidak aktif';
+                            const statusTitle = acc.isCurrent ? '当前激活' : '未激活';
 
                             const subTier = (acc.quota && acc.quota.tier) ? acc.quota.tier : '-';
 
@@ -1077,9 +1046,9 @@ export class DashboardProvider {
                                 <td style="color:var(--text-secondary);font-size:12px;">\${lastUsedStr}</td>
                                 <td style="text-align: right;">
                                     <div class="btn-group" style="justify-content: flex-end;">
-                                        \${!acc.isCurrent ? \`<button class="teal" onclick="switchAccount('\${acc.id}', '\${acc.email}')">Beralih</button>\` : '<span style="font-size:12px;color:#4ade80;margin-right:10px;">Digunakan</span>'}
-                                        <button class="secondary" onclick="refreshAccount('\${acc.id}')">Refresh</button>
-                                        <button class="danger" onclick="deleteAccount('\${acc.id}', '\${acc.email}')">Hapus</button>
+                                        \${!acc.isCurrent ? \`<button class="teal" onclick="switchAccount('\${acc.id}', '\${acc.email}')">切换</button>\` : '<span style="font-size:12px;color:#4ade80;margin-right:10px;">使用中</span>'}
+                                        <button class="secondary" onclick="refreshAccount('\${acc.id}')">刷新</button>
+                                        <button class="danger" onclick="deleteAccount('\${acc.id}', '\${acc.email}')">移除</button>
                                     </div>
                                 </td>
                             \`;
@@ -1113,10 +1082,10 @@ export class DashboardProvider {
                             let quotaHtml = '';
                             if (acc.quota && !acc.quota.is_forbidden) {
                                 quotaHtml = '<div class="quota-grid">' + acc.quota.models.map(m => {
-                                    // Strategi warna yang lebih cerdas
-                                    let color = '#4ade80'; // Hijau (Cukup)
-                                    if (m.percentage <= 20) color = '#f87171'; // Merah (Kritis)
-                                    else if (m.percentage <= 50) color = '#fbbf24'; // Kuning (Perhatian)
+                                    // 更智能的颜色策略
+                                    let color = '#4ade80'; // 绿色 (足够)
+                                    if (m.percentage <= 20) color = '#f87171'; // 红色 (告急)
+                                    else if (m.percentage <= 50) color = '#fbbf24'; // 黄色 (注意)
                                     
                                     return \`
                                         <div class="quota-card">
@@ -1128,30 +1097,30 @@ export class DashboardProvider {
                                                 <div class="progress-fill" style="width: \${m.percentage}%; background: \${color}; box-shadow: 0 0 10px \${color}44"></div>
                                             </div>
                                             <div class="quota-meta">
-                                                <span>Waktu Reset</span>
-                                                <span>\${m.reset_time || 'Tidak diketahui'}</span>
+                                                <span>重置时间</span>
+                                                <span>\${m.reset_time || '未知'}</span>
                                             </div>
                                         </div>
                                     \`;
                                 }).join('') + '</div>';
                             } else {
-                                // Membedakan prompt akun saat ini dan bukan
+                                // 区分当前账号和非当前账号的提示
                                 if (acc.isCurrent) {
-                                    // Akun ini tidak memiliki data - kesalahan sebenarnya
+                                    // 当前账号无数据 - 真正的错误
                                     quotaHtml = \`
                                         <div style="text-align:center; padding: 20px; background: rgba(248, 113, 113, 0.05); border-radius: 12px; border: 1px dashed #f87171; color: #f87171; margin-top:20px;">
                                             <div style="font-size: 18px; margin-bottom:8px;">⚠️</div>
-                                            <div>Belum ada data kuota (Token mungkin sudah kedaluwarsa atau izin dibatasi)</div>
-                                            <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">Silakan klik tombol "Refresh" di atas untuk mencoba lagi</div>
+                                            <div>暂无配额数据 (Token 可能已失效或权限受限)</div>
+                                            <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">请点击上方"刷新"按钮重试</div>
                                         </div>\`;
                                 } else {
-                                    // Bukan akun ini yang tidak ada data - Normal, Prompt yang ramah
+                                    // 非当前账号无数据 - 正常现象，友好提示
                                     quotaHtml = \`
                                         <div style="text-align:center; padding: 20px; background: rgba(14, 165, 233, 0.05); border-radius: 12px; border: 1px dashed rgba(14, 165, 233, 0.4); color: var(--text-secondary); margin-top:20px;">
                                             <div style="font-size: 18px; margin-bottom:8px;">💤</div>
-                                            <div style="color: var(--text-primary);">Data kuota menunggu penyegaran</div>
-                                            <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">Untuk mengurangi risiko batas frekuensi API, panel ini hanya merefresh otomatis akun yang diaktifkan</div>
-                                            <div style="font-size: 12px; margin-top: 4px; opacity: 0.7;">Klik tombol "Refresh" di atas untuk mendapatkan kuota secara manual</div>
+                                            <div style="color: var(--text-primary);">配额数据待刷新</div>
+                                            <div style="font-size: 12px; margin-top: 8px; opacity: 0.8;">为降低触发 API 频率限制的风险，后台仅自动刷新当前启用的账号</div>
+                                            <div style="font-size: 12px; margin-top: 4px; opacity: 0.7;">点击上方【刷新】按钮可手动获取配额</div>
                                         </div>\`;
                                 }
                             }
@@ -1159,20 +1128,20 @@ export class DashboardProvider {
                             panel.innerHTML = \`
                                 <div class="panel-header">
                                     <div class="account-info">
-                                        <h2>\${acc.name || 'Akun Tanpa Nama'}</h2>
+                                        <h2>\${acc.name || '未命名账号'}</h2>
                                         <p>\${acc.email}</p>
                                         \${acc.quota?.tier ? \`<div style="margin-top:8px;"><span class="badge" style="background:var(--accent-blue);color:var(--primary-blue);margin-left:0;border:1px solid var(--primary-blue)">\${acc.quota.tier.toUpperCase()}</span></div>\` : ''}
                                     </div>
                                     <div class="btn-group">
-                                        <button class="secondary" onclick="refreshAccount('\${acc.id}')">Refresh</button>
+                                        <button class="secondary" onclick="refreshAccount('\${acc.id}')">刷新</button>
                                         <button onclick="switchAccount('\${acc.id}', '\${acc.email}')" \${acc.isCurrent ? 'disabled' : ''}>
-                                            \${acc.isCurrent ? 'Akun Utama' : 'Beralih ke Akun Ini'}
+                                            \${acc.isCurrent ? '当前主账号' : '切换到此账号'}
                                         </button>
                                     </div>
                                 </div>
                                 \${quotaHtml}
                                 <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color); display:flex; justify-content: flex-end;">
-                                    <button class="danger" onclick="deleteAccount('\${acc.id}', '\${acc.email}')">Hapus Akun Ini</button>
+                                    <button class="danger" onclick="deleteAccount('\${acc.id}', '\${acc.email}')">移除此账号</button>
                                 </div>
                             \`;
                             panelContainer.appendChild(panel);
@@ -1180,7 +1149,7 @@ export class DashboardProvider {
                         updateViewUI();
                     }
 
-                    // Render daftar grup
+                    // 渲染分组列表
                     function renderGroupsList() {
                         const container = document.getElementById('groupsList');
                         const allModels = getAllModels();
@@ -1190,7 +1159,7 @@ export class DashboardProvider {
                             container.innerHTML = \`
                                 <div class="empty-state">
                                     <div class="empty-state-icon"></div>
-                                    <p>Belum ada grup, klik "Pengelompokan Otomatis" atau "Tambah Grup" untuk memulai</p>
+                                    <p>暂无分组，点击"自动分组"或"添加分组"开始管理</p>
                                 </div>
                             \`;
                             return;
@@ -1204,7 +1173,7 @@ export class DashboardProvider {
                                             onchange="updateGroupName('\${group.id}', this.value)" 
                                             onclick="event.stopPropagation()">
                                     </div>
-                                    <button class="group-danger" onclick="deleteGroup('\${group.id}')" title="Hapus grup">Hapus</button>
+                                    <button class="group-danger" onclick="deleteGroup('\${group.id}')" title="删除分组">移除</button>
                                 </div>
                                 <div class="model-tags">
                                     \${group.models.map(modelName => \`
@@ -1214,16 +1183,16 @@ export class DashboardProvider {
                                         </div>
                                     \`).join('')}
                                     <div class="model-dropdown">
-                                        <button class="add-model-btn" onclick="toggleModelDropdown('\${group.id}', event)">Tambah Model</button>
+                                        <button class="add-model-btn" onclick="toggleModelDropdown('\${group.id}', event)">添加模型</button>
                                         <div class="model-dropdown-content" id="dropdown-\${group.id}">
                                             \${allModels.filter(m => !group.models.includes(m.name)).map(m => \`
                                                 <div class="model-dropdown-item \${groupedModels.has(m.name) && !group.models.includes(m.name) ? 'disabled' : ''}" 
                                                     onclick="\${groupedModels.has(m.name) && !group.models.includes(m.name) ? '' : \`addModelToGroup('\${group.id}', '\${m.name}')\`}">
                                                     \${m.name}
-                                                    \${groupedModels.has(m.name) ? ' (Sudah ada di grup lain)' : ''}
+                                                    \${groupedModels.has(m.name) ? ' (已在其他分组)' : ''}
                                                 </div>
                                             \`).join('')}
-                                            \${allModels.filter(m => !group.models.includes(m.name)).length === 0 ? '<div class="model-dropdown-item" style="opacity: 0.5">Tidak ada model yang dapat ditambahkan</div>' : ''}
+                                            \${allModels.filter(m => !group.models.includes(m.name)).length === 0 ? '<div class="model-dropdown-item" style="opacity: 0.5">没有可添加的模型</div>' : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -1231,12 +1200,12 @@ export class DashboardProvider {
                         \`).join('');
                     }
 
-                    // Beralih dropdown model
+                    // 切换模型下拉框
                     function toggleModelDropdown(groupId, event) {
                         event.stopPropagation();
                         const dropdown = document.getElementById('dropdown-' + groupId);
                         
-                        // Tutup dropdown lain
+                        // 关闭其他下拉框
                         document.querySelectorAll('.model-dropdown-content').forEach(d => {
                             if (d.id !== 'dropdown-' + groupId) {
                                 d.classList.remove('show');
@@ -1247,7 +1216,7 @@ export class DashboardProvider {
                         activeDropdownId = dropdown.classList.contains('show') ? groupId : null;
                     }
 
-                    // Klik di tempat lain tutup dropdown
+                    // 点击其他地方关闭下拉框
                     document.addEventListener('click', () => {
                         document.querySelectorAll('.model-dropdown-content').forEach(d => {
                             d.classList.remove('show');
@@ -1255,55 +1224,55 @@ export class DashboardProvider {
                         activeDropdownId = null;
                     });
 
-                    // Buka popup manajemen grup
+                    // 打开分组管理弹窗
                     function openGroupManager() {
                         document.getElementById('groupModal').classList.add('active');
                         renderGroupsList();
                     }
 
-                    // Tutup popup manajemen grup
+                    // 关闭分组管理弹窗
                     function closeGroupManager() {
                         document.getElementById('groupModal').classList.remove('active');
                     }
 
-                    // Pengelompokan otomatis
+                    // 自动分组
                     function autoGroup() {
                         const models = getAllModels();
                         vscode.postMessage({ command: 'autoGroup', models: models });
                     }
 
-                    // Tambah grup baru
+                    // 添加新分组
                     function addNewGroup() {
-                        vscode.postMessage({ command: 'addGroup', groupName: 'Grup Baru' });
+                        vscode.postMessage({ command: 'addGroup', groupName: '新分组' });
                     }
 
-                    // Hapus grup
+                    // 删除分组
                     function deleteGroup(groupId) {
                         vscode.postMessage({ command: 'deleteGroup', groupId: groupId });
                     }
 
-                    // Perbarui nama grup
+                    // 更新分组名称
                     function updateGroupName(groupId, newName) {
                         vscode.postMessage({ command: 'updateGroupName', groupId: groupId, newName: newName });
                     }
 
-                    // Tambahkan model ke grup
+                    // 向分组添加模型
                     function addModelToGroup(groupId, modelName) {
                         vscode.postMessage({ command: 'addModelToGroup', groupId: groupId, modelName: modelName });
                     }
 
-                    // Hapus model dari grup
+                    // 从分组移除模型
                     function removeModelFromGroup(groupId, modelName) {
                         vscode.postMessage({ command: 'removeModelFromGroup', groupId: groupId, modelName: modelName });
                     }
 
-                    // Simpan grup
+                    // 保存分组
                     function saveGroups() {
                         vscode.postMessage({ command: 'saveGroups', config: groupsConfig });
                         closeGroupManager();
                     }
 
-                    // Menerima pesan dari ekstensi
+                    // 接收来自扩展的消息
                     window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.command === 'groupsConfig') {
@@ -1331,3 +1300,6 @@ export class DashboardProvider {
             </html>`;
     }
 }
+exports.DashboardProvider = DashboardProvider;
+DashboardProvider.viewType = 'antigravityDashboard';
+//# sourceMappingURL=old_dashboard.js.map

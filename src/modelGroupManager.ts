@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as fs from 'fs';
 import * as path from 'path';
 import { DATA_DIR } from './constants';

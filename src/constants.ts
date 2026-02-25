@@ -13,9 +13,9 @@ export const ACCOUNTS_INDEX_FILE = path.join(DATA_DIR, "accounts.json");
 export const ACCOUNTS_DIR = path.join(DATA_DIR, "accounts");
 
 /**
- * 获取 Antigravity IDE 的全局状态数据库路径
- * @param overridePath 配置中的覆盖路径（可选）
- * @returns 数据库文件路径
+ * Mendapatkan jalur basis data status global Antigravity IDE
+ * @param overridePath Jalur override dari konfigurasi (opsional)
+ * @returns Jalur file basis data
  */
 export function getVSCDBPath(overridePath?: string): string {
     if (overridePath && overridePath.trim()) {
@@ -25,7 +25,7 @@ export function getVSCDBPath(overridePath?: string): string {
     const platform = os.platform();
 
     if (platform === 'win32') {
-        // 示例：C:\Users\<user>\AppData\Roaming\Antigravity\User\globalStorage\state.vscdb
+        // Contoh: C:\Users\<user>\AppData\Roaming\Antigravity\User\globalStorage\state.vscdb
         return path.join(
             process.env.APPDATA || '',
             'Antigravity',
@@ -36,7 +36,7 @@ export function getVSCDBPath(overridePath?: string): string {
     }
 
     if (platform === 'darwin') {
-        // 示例：/Users/<user>/Library/Application Support/Antigravity/User/globalStorage/state.vscdb
+        // Contoh: /Users/<user>/Library/Application Support/Antigravity/User/globalStorage/state.vscdb
         return path.join(
             os.homedir(),
             'Library',
@@ -48,7 +48,7 @@ export function getVSCDBPath(overridePath?: string): string {
         );
     }
 
-    // Linux / 其他类 Unix：示例：~/.config/Antigravity/User/globalStorage/state.vscdb
+    // Linux / Mirip Unix lainnya: Contoh: ~/.config/Antigravity/User/globalStorage/state.vscdb
     return path.join(
         os.homedir(),
         '.config',
@@ -59,7 +59,7 @@ export function getVSCDBPath(overridePath?: string): string {
     );
 }
 
-// 向后兼容：保留常量导出（使用默认路径）
+// Kompatibel ke belakang: pertahankan ekspor konstanta (gunakan path default)
 export const VSCDB_PATH = getVSCDBPath();
 
 export const IMPORTANT_MODELS = ["gemini", "claude"];

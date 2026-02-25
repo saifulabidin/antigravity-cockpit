@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as url from 'url';
@@ -22,17 +23,17 @@ import { ModelGroupManager } from './modelGroupManager';
 import { SwitcherProxy } from './switcherProxy';
 
 /**
- * 计算字符串在等宽字体下的视觉宽度
- * CJK字符和 Emoji 计为 2 个单位，其余 ASCII 字符计为 1 个单位
+ * [Komentar/Teks terjemahan]
+ * CJK[Komentar/Teks terjemahan] Emoji [Komentar/Teks terjemahan] 2 [Komentar/Teks terjemahan], [Komentar/Teks terjemahan] ASCII [Komentar/Teks terjemahan] 1 [Komentar/Teks terjemahan]
  */
 function getVisualWidth(str: string): number {
     let width = 0;
     for (const char of str) {
         const code = char.charCodeAt(0);
-        // CJK 字符范围: 0x4E00 - 0x9FFF, 全角字符: 0xFF00 - 0xFFEF
+        // CJK [Komentar/Teks terjemahan]: 0x4E00 - 0x9FFF, [Komentar/Teks terjemahan]: 0xFF00 - 0xFFEF
         if ((code >= 0x4E00 && code <= 0x9FFF) || (code >= 0xFF00 && code <= 0xFFEF)) {
             width += 2;
-        } else if (char.length > 1) { // 处理 surrogate pairs (如 Emoji)
+        } else if (char.length > 1) { // [Komentar/Teks terjemahan] surrogate pairs ([Komentar/Teks terjemahan] Emoji)
             width += 2;
         } else {
             width += 1;
@@ -48,10 +49,10 @@ export function activate(context: vscode.ExtensionContext) {
     // --- Welcome Message for First Install ---
     if (!context.globalState.get('hasShownWelcome')) {
         vscode.window.showInformationMessage(
-            '🚀 Antigravity Multi-Account Cockpit 已成功安装！请关注底部状态栏的 UFO 图标。',
-            '打开面板'
+            '🚀 Antigravity Multi-Account Cockpit [Komentar/Teks terjemahan]![Komentar/Teks terjemahan] UFO [Komentar/Teks terjemahan].',
+            '[Komentar/Teks terjemahan]'
         ).then(selection => {
-            if (selection === '打开面板') {
+            if (selection === '[Komentar/Teks terjemahan]') {
                 vscode.commands.executeCommand('antigravity-cockpit.openDashboard');
             }
         });
@@ -63,16 +64,16 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.command = 'antigravity-cockpit.openDashboard';
     context.subscriptions.push(statusBarItem);
 
-    // 立即显示状态栏（初始状态）
-    statusBarItem.text = "$(sync~spin) 加载中...";
-    statusBarItem.tooltip = "正在加载 Antigravity 账号信息...";
+    // [Komentar/Teks terjemahan]([Komentar/Teks terjemahan])
+    statusBarItem.text = "$(sync~spin) [Komentar/Teks terjemahan]...";
+    statusBarItem.tooltip = "Sedang dimuat Antigravity Akuninfo...";
     statusBarItem.show();
 
     async function updateStatusBar() {
         const index = AccountManager.loadIndex();
         if (!index.current_account_id) {
-            statusBarItem.text = "$(account) 无账号";
-            statusBarItem.tooltip = "点击登录或添加 Antigravity 账号";
+            statusBarItem.text = "$(account) [Komentar/Teks terjemahan]Akun";
+            statusBarItem.tooltip = "[Komentar/Teks terjemahan]Menambah Antigravity Akun";
             statusBarItem.show();
             return;
         }
@@ -82,43 +83,43 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (!account.token) {
                 statusBarItem.text = `$(account) ${account.email.split('@')[0]}`;
-                statusBarItem.tooltip = "点击查看账号详情";
+                statusBarItem.tooltip = "[Komentar/Teks terjemahan]Akun[Komentar/Teks terjemahan]";
                 statusBarItem.show();
                 return;
             }
 
             let quota;
             try {
-                // 尝试获取配额
+                // [Komentar/Teks terjemahan]
                 quota = await AccountManager.fetchQuota(account.token.access_token);
             } catch (err: any) {
-                // 如果是 401 (Unauthorized)，尝试刷新 Token
+                // [Komentar/Teks terjemahan] 401 (Unauthorized), [Komentar/Teks terjemahan] Token
                 if (err.response && err.response.status === 401) {
                     try {
                         console.log('Token expired (401), attempting to refresh...');
                         const refreshed = await AccountManager.refreshToken(account.token.refresh_token);
 
-                        // 更新内存和文件中的 Token
+                        // [Komentar/Teks terjemahan] Token
                         account.token.access_token = refreshed.accessToken;
                         account.token.expiry_timestamp = Math.floor(Date.now() / 1000) + refreshed.expiresIn;
                         AccountManager.saveAccount(account);
 
-                        // 使用新 Token 重试获取配额
+                        // [Komentar/Teks terjemahan] Token [Komentar/Teks terjemahan]
                         quota = await AccountManager.fetchQuota(refreshed.accessToken);
                         console.log('Token refreshed and quota fetched successfully.');
                     } catch (refreshErr) {
-                        // 刷新失败，抛出原始错误或刷新错误
+                        // [Komentar/Teks terjemahan], [Komentar/Teks terjemahan]
                         console.error('Failed to refresh token:', refreshErr);
-                        throw err; // 抛出原始 401 错误，让外层 catch 处理
+                        throw err; // [Komentar/Teks terjemahan] 401 [Komentar/Teks terjemahan], [Komentar/Teks terjemahan] catch [Komentar/Teks terjemahan]
                     }
                 } else {
-                    // 非 401 错误，直接抛出
+                    // [Komentar/Teks terjemahan] 401 [Komentar/Teks terjemahan], [Komentar/Teks terjemahan]
                     throw err;
                 }
             }
 
-            // 首次安装时初始化默认分组（如果分组为空）
-            // 将 quota.models 转换为 ModelInfo[] 格式
+            // [Komentar/Teks terjemahan]([Komentar/Teks terjemahan])
+            // [Komentar/Teks terjemahan] quota.models [Komentar/Teks terjemahan] ModelInfo[] [Komentar/Teks terjemahan]
             const modelsForInit = (quota.models || []).map((m: any) => ({
                 name: m.name,
                 resetTime: m.reset_time || '',
@@ -126,29 +127,29 @@ export function activate(context: vscode.ExtensionContext) {
             }));
             ModelGroupManager.initDefaultGroupIfNeeded(modelsForInit);
 
-            // 加载分组配置
+            // [Komentar/Teks terjemahan]Konfigurasi pengaturan
             const groupsConfig = ModelGroupManager.loadGroups();
 
             if (groupsConfig.groups.length === 0 || quota.is_forbidden) {
-                // 无分组或无权限，显示简单状态
+                // [Komentar/Teks terjemahan], [Komentar/Teks terjemahan]
                 statusBarItem.text = `$(account) ${account.email.split('@')[0]}`;
             } else {
-                // 按分组显示每个分组中剩余额度最低的模型
+                // [Komentar/Teks terjemahan]
                 const groupTexts: string[] = [];
 
                 for (const group of groupsConfig.groups) {
-                    // 找出该分组中的模型 (group.models 是模型名称字符串数组)
+                    // [Komentar/Teks terjemahan]Aset[Komentar/Teks terjemahan] (group.models [Komentar/Teks terjemahan])
                     const groupModels = quota.models.filter((m: any) =>
                         group.models.includes(m.name)
                     );
 
                     if (groupModels.length > 0) {
-                        // 找出剩余额度最低的模型
+                        // Temukan model dengan sisa kuota terendah
                         const lowestModel = groupModels.reduce((min: any, m: any) =>
                             m.percentage < min.percentage ? m : min
                             , groupModels[0]);
 
-                        // 根据额度选择颜色图标
+                        // Pilih ikon warna berdasarkan kuota
                         const icon = lowestModel.percentage > 50 ? "🟢" : (lowestModel.percentage > 20 ? "🟡" : "🔴");
                         groupTexts.push(`${icon} ${group.name}: ${lowestModel.percentage}%`);
                     }
@@ -162,38 +163,38 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Generate detailed tooltip for hover
-            let tooltip = new vscode.MarkdownString();
+            const tooltip = new vscode.MarkdownString();
             tooltip.isTrusted = true;
             tooltip.supportHtml = true;
 
             tooltip.appendMarkdown(`🛸 **Antigravity Copilot**\n\n`);
 
             if (!quota.is_forbidden) {
-                // 获取分组内的模型
+                // Dapatkan model dalam grup
                 const groupedModelNames = new Set<string>();
                 groupsConfig.groups.forEach(g => {
                     g.models.forEach((modelName: string) => groupedModelNames.add(modelName));
                 });
 
-                // 只显示分组内的模型，如果没有分组则显示所有
+                // Hanya tampilkan model dalam grup, jika tidak ada grup tampilkan semua
                 const modelsToShow = groupedModelNames.size > 0
                     ? quota.models.filter((m: any) => groupedModelNames.has(m.name))
                     : quota.models;
 
-                // 计算模型名的最大宽度（中文按2位算，简单正则处理）
-                // 极致精确的视觉宽度计算
+                // Hitung lebar maksimum nama model (huruf Mandarin 2 bit, pakai regex)
+                // Perhitungan presisi ekstrem dari lebar visual
                 const getLen = (s: string) => {
                     let len = 0;
                     for (const char of s) {
                         const code = char.charCodeAt(0);
-                        // 1. Emoji 图标 (surrogate pairs) -> 2位
+                        // 1. Ikon emoji -> 2 bit
                         if (char.length > 1) { len += 2; }
-                        // 2. 中文字符、全角符号 -> 2位
+                        // 2. Karakter China/simbol penuh -> 2 bit
                         else if (code >= 0x4E00 && code <= 0x9FFF || code >= 0xFF00 && code <= 0xFFEF) {
                             len += 2;
                         }
-                        // 3. 进度条块、箭头、ASCII、普通符号 -> 1位
-                        // (注意：█ \u2588, ░ \u2591, → \u2192 在等宽字体下都是1位)
+                        // 3. Blok bilah angka, panah, dll -> 1 bit
+                        // (Catatan: Simbol-simbol tersebut biasanya lebar 1 bit)
                         else { len += 1; }
                     }
                     return len;
@@ -209,7 +210,7 @@ export function activate(context: vscode.ExtensionContext) {
                     const progressBar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
 
                     let timeInfo = '';
-                    // 使用 reset_time_raw (原始 UTC 时间) 计算倒计时
+                    // Gunakan hitung mundur reset_raw (UTC asli)
                     const rawResetTime = m.reset_time_raw || m.reset_time;
                     if (rawResetTime) {
                         const resetDate = new Date(rawResetTime);
@@ -221,7 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
                             const resetTimeStr = resetDate.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
                             timeInfo = `${diffHours}h${String(diffMins).padStart(2, '0')}m (${resetTimeStr})`;
                         } else {
-                            timeInfo = '已重置';
+                            timeInfo = 'Telah direset';
                         }
                     }
 
@@ -231,26 +232,26 @@ export function activate(context: vscode.ExtensionContext) {
                     const namePadding = ' '.repeat(Math.max(0, maxNameWidth - getLen(m.name)));
                     const paddedName = m.name + namePadding;
 
-                    // 保持使用 → 符号，getLen 会将其识别为 2 位宽（图标/非ASCII）
+                    // Tetap gunakan panah kanan, getLen menghitungnya 2 bit
                     lines.push(`${icon} ${paddedName} ${progressBar} ${pctStr} → ${timeStr}`);
                 });
 
-                // 用固定公式计算总行宽：icon(2) + 模型名(N) + 进度条(10) + 百分比(4) + 箭头(1) + 时间(13) + 空格(5) = N + 35
+                // Pakai rumus baku total: N + 35
                 const currentAccountLabel = account.name || account.email;
                 const totalLineWidth = maxNameWidth + 35;
-                const leftText = '点击打开设置面板';
-                const rightText = `当前账号：${currentAccountLabel}`;
+                const leftText = 'Klik untuk buka panel pengaturan';
+                const rightText = `Akun terkini:${currentAccountLabel}`;
 
-                // 剩余空格 = 总行宽 - 左侧格数 - 右侧格数
+                // Spasi sisa = lebar total - kotak kiri - kotak kanan
                 const spaces = Math.max(1, totalLineWidth - getLen(leftText) - getLen(rightText));
                 lines.push(leftText + ' '.repeat(spaces) + rightText);
 
                 tooltip.appendMarkdown('```\n' + lines.join('\n') + '\n```\n');
             } else {
-                // 无权限时简单展示当前账号
+                // Tampilan sederhana bila tiada izinAkun Saat ini
                 const currentAccountLabel = account.name || account.email;
                 tooltip.appendMarkdown('```\n');
-                tooltip.appendMarkdown(`配额: 无权限    当前账号：${currentAccountLabel}\n`);
+                tooltip.appendMarkdown(`Kuota: Tiada izin    Akun terkini:${currentAccountLabel}\n`);
                 tooltip.appendMarkdown('```\n');
             }
 
@@ -258,29 +259,29 @@ export function activate(context: vscode.ExtensionContext) {
             statusBarItem.command = 'antigravity-cockpit.openDashboard';
             statusBarItem.show();
 
-            // 连接成功，重置错误状态
+            // Koneksi sukses, reset error
             lastConnectionError = false;
             connectionErrorCount = 0;
         } catch (e: any) {
             connectionErrorCount++;
 
-            // 更新状态栏显示错误状态，点击时尝试重新连接
-            statusBarItem.text = "$(error) 连接失败";
-            // 详细错误信息放在 tooltip 中，方便排查
+            // Update status bar tunjukan galat, klik buat reconnect
+            statusBarItem.text = "$(error) Koneksi gagal";
+            // Rincian error taro d tooltip, bantu pemecahan masalah
             const errorTooltip = new vscode.MarkdownString();
             errorTooltip.appendMarkdown(`**Antigravity Copilot**\n\n`);
-            errorTooltip.appendMarkdown(`❌ *连接失败*\n\n`);
-            errorTooltip.appendMarkdown(`错误信息: ${e.message || 'Unknown error'}\n\n`);
+            errorTooltip.appendMarkdown(`❌ *Koneksi gagal*\n\n`);
+            errorTooltip.appendMarkdown(`Info eror:${e.message || 'Unknown error'}\n\n`);
             if (e.response && e.response.status) {
                 errorTooltip.appendMarkdown(` (Status: ${e.response.status})`);
             }
-            errorTooltip.appendMarkdown(`\n\n*点击尝试重新连接*`);
+            errorTooltip.appendMarkdown(`\n\n*Klik buat coba sambung lagi*`);
             statusBarItem.tooltip = errorTooltip;
 
             statusBarItem.command = 'antigravity-cockpit.reconnect';
             statusBarItem.show();
 
-            // 避免频繁通知：使用配置的刷新间隔作为通知间隔
+            // Hindari bom notif: pakaiKonfigurasi pengaturaninterval penyegaran sbg jeda notif
             const now = Date.now();
             const notifyConfig = vscode.workspace.getConfiguration('antigravity-cockpit'); const notifyIntervalMs = (notifyConfig.get<number>('autoRefreshInterval', 5)) * 60 * 1000;
             const shouldNotify = !lastConnectionError || (now - lastNotificationTime > notifyIntervalMs);
@@ -289,13 +290,13 @@ export function activate(context: vscode.ExtensionContext) {
                 lastConnectionError = true;
                 lastNotificationTime = now;
 
-                const errorMessage = e.message || '未知错误';
+                const errorMessage = e.message || 'Kesalahan tidak diketahui';
                 vscode.window.showWarningMessage(
-                    `Antigravity 账户连接失败: ${errorMessage}`,
-                    '重新连接',
-                    '关闭'
+                    `Antigravity [Komentar/Teks terjemahan]Koneksi gagal: ${errorMessage}`,
+                    'Menghubung ulang',
+                    'Tutup'
                 ).then(selection => {
-                    if (selection === '重新连接') {
+                    if (selection === 'Menghubung ulang') {
                         updateStatusBar();
                     }
                 });
@@ -303,7 +304,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    // 连接状态跟踪
+    // Pemantauan status koneksi
     let lastConnectionError = false;
     let lastNotificationTime = 0;
     let connectionErrorCount = 0;
@@ -317,37 +318,37 @@ export function activate(context: vscode.ExtensionContext) {
         updateStatusBar();
     };
 
-    // 注册刷新状态栏命令 (供分组管理等功能调用)
-    let refreshStatusBarCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshStatusBar', () => {
+    // Daftarkan perintah penyegaran status bar
+    const refreshStatusBarCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshStatusBar', () => {
         updateStatusBar();
     });
     context.subscriptions.push(refreshStatusBarCommand);
 
-    // 注册重新连接命令
-    let reconnectCommand = vscode.commands.registerCommand('antigravity-cockpit.reconnect', async () => {
-        vscode.window.showInformationMessage('正在尝试重新连接...');
+    // [Komentar/Teks terjemahan]Menghubung ulang[Komentar/Teks terjemahan]
+    const reconnectCommand = vscode.commands.registerCommand('antigravity-cockpit.reconnect', async () => {
+        vscode.window.showInformationMessage('[Komentar/Teks terjemahan]Menghubung ulang...');
         try {
             await updateStatusBar();
             if (!lastConnectionError) {
-                vscode.window.showInformationMessage('连接成功！');
+                vscode.window.showInformationMessage('Berhasil nyambung!');
             }
         } catch (e) {
-            // 错误已在 updateStatusBar 中处理
+            // Error dah diurus dalam updateStatusBar
         }
     });
     context.subscriptions.push(reconnectCommand);
 
-    // --- 定时自动刷新功能 ---
+    // --- Fitur auto refresh berkala ---
     let autoRefreshTimer: NodeJS.Timeout | undefined;
 
     function setupAutoRefresh() {
-        // 清除现有定时器
+        // Sapu bersih pewaktu yg ada
         if (autoRefreshTimer) {
             clearInterval(autoRefreshTimer);
             autoRefreshTimer = undefined;
         }
 
-        // 读取配置
+        // MembacaKonfigurasi pengaturan
         const config = vscode.workspace.getConfiguration('antigravity-cockpit');
         const intervalMinutes = config.get<number>('autoRefreshInterval', 5);
 
@@ -356,26 +357,26 @@ export function activate(context: vscode.ExtensionContext) {
             autoRefreshTimer = setInterval(() => {
                 updateStatusBar();
             }, intervalMs);
-            console.log(`Antigravity Multi-Account Cockpit: 自动刷新已启用，间隔 ${intervalMinutes} 分钟`);
+            console.log(`Antigravity Multi-Account Cockpit: Auto-refresh menyala, berjarak ${intervalMinutes} menit`);
         } else {
-            console.log('Antigravity Multi-Account Cockpit: 自动刷新已禁用');
+            console.log('Antigravity Multi-Account Cockpit: Auto-refresh dipadamkan');
         }
     }
 
-    // 初始化定时刷新
+    // Merintis auto refresh
     setupAutoRefresh();
 
-    // 监听配置变化
+    // MenyimakKonfigurasi pengaturanperubahan
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('antigravity-cockpit.autoRefreshInterval')) {
                 setupAutoRefresh();
-                vscode.window.showInformationMessage('自动刷新设置已更新');
+                vscode.window.showInformationMessage('Setelan auto refresh telah ditata');
             }
         })
     );
 
-    // 确保插件停用时清除定时器
+    // Garansi musnahkan pewaktu ketika plugin rehat
     context.subscriptions.push({
         dispose: () => {
             if (autoRefreshTimer) {
@@ -384,11 +385,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    let refreshCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAccounts', () => {
+    const refreshCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAccounts', () => {
         accountTreeProvider.refresh();
     });
 
-    let addAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.addAccount', async () => {
+    const addAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.addAccount', async () => {
         try {
             const tokenInfo = await performOAuth();
             if (tokenInfo) {
@@ -437,15 +438,15 @@ export function activate(context: vscode.ExtensionContext) {
 
                 AccountManager.saveAccount(account);
                 accountTreeProvider.refresh();
-                DashboardProvider.refresh(); // 新增：刷新面板
-                vscode.window.showInformationMessage(`账号 ${userInfo.email} 添加成功！`);
+                DashboardProvider.refresh(); // Terobosan: segarkan panel
+                vscode.window.showInformationMessage(`Akun ${userInfo.email} ditambah sukses!`);
             }
         } catch (e) {
-            vscode.window.showErrorMessage(`添加账号失败: ${(e as Error).message}`);
+            vscode.window.showErrorMessage(`MenambahAkungagal: ${(e as Error).message}`);
         }
     });
 
-    let switchAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.switchAccount', async (item: any) => {
+    const switchAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.switchAccount', async (item: any) => {
         const accountId = item.accountId;
         if (!accountId) { return; }
 
@@ -454,19 +455,19 @@ export function activate(context: vscode.ExtensionContext) {
 
         const message =
             switchMode === 'safe'
-                ? `即将切换到账号 ${item.email}\n\n【安全模式】仅更新插件内的当前账号，不会修改 IDE 数据库或重启 IDE。\n\n切换后请手动重启 Antigravity IDE 以使新账号生效。`
-                : `即将切换到账号 ${item.email}\n\n⚠️ 此操作将：\n• 关闭所有 Antigravity IDE 进程\n• 更新账号凭据到 IDE 数据库\n• 约 10 秒后自动重新启动 IDE\n\nAntigravity 重启后，需要等待几秒钟才会显示新账号；\n\n如自动重启失败，请手动打开 Antigravity IDE。`;
+                ? `Ntar ganti ke akun ${item.email}\n\n(Mode Aman) cuman update lokal ekstensiAkun Saat ini, ga bakal ngerubah DB IDE ataupun ngerestart IDE.\n\nSilahkan di restart sendirian aja Antigravity IDE nya.`
+                : `Ntar ganti ke akun ${item.email}\n\n⚠️ Operasi ini akan:\n• Tutup semua proses Antigravity IDE\n• Perbarui kredensial akun ke database IDE\n• Secara otomatis restart IDE setelah sekitar 10 detik\n\nSetelah Antigravity restart, tunggu beberapa detik untuk menampilkan akun baru;\n\nJika restart otomatis gagal, buka Antigravity IDE secara manual.`;
 
         const confirm = await vscode.window.showWarningMessage(
             message,
             { modal: true },
-            '确定'
+            'Konfirmasi'
         );
 
-        if (confirm !== '确定') { return; }
+        if (confirm !== 'Konfirmasi') { return; }
 
         if (switchMode === 'safe') {
-            // 安全模式：只更新当前账号索引与 UI，不做 Kill/注入/自动重启
+            // Mode Aman: [Komentar/Teks terjemahan]Akun Saat iniIndex dan UI, nga ada bunuh/suntikan/restart otomatis
             const index = AccountManager.loadIndex();
             index.current_account_id = accountId;
             AccountManager.saveIndex(index);
@@ -475,12 +476,12 @@ export function activate(context: vscode.ExtensionContext) {
             DashboardProvider.refresh();
 
             vscode.window.showInformationMessage(
-                `已切换到账号 ${item.email}（安全模式）。请手动重启 Antigravity IDE 以让内置 Agent 生效。`
+                `Telah bertransisi ke Akun ${item.email} (Mode Aman). Mangga restart manual Antigravity IDE supaya agen internal manggung.`
             );
             return;
         }
 
-        // 高级模式下，先进行环境预检查
+        // Bawah Mode Ekstra, jalanin pra-cek lingkungan
         const dbPathOverride = config.get<string>('databasePathOverride', '');
         const exePathConfig = config.get<{ win32?: string; darwin?: string; linux?: string }>('antigravityExecutablePath', {});
 
@@ -490,47 +491,47 @@ export function activate(context: vscode.ExtensionContext) {
         );
 
         if (!envCheck.success) {
-            // 有致命问题，显示详细信息
+            // Ditemukan problem fatal, ini rinciannya
             const detailMessage = envCheck.suggestions.join('\n');
             const action = await vscode.window.showErrorMessage(
-                `⚠️ 环境检查发现问题，可能无法完成账号切换：\n\n${detailMessage}`,
+                `!! Uji envi mendapati isu, kyknya ga lolosSelesaiAkunpergantian:\n\n${detailMessage}`,
                 { modal: true },
-                '仍然尝试切换',
-                '取消'
+                'Tetep nekat ganti',
+                'Batal'
             );
 
-            if (action !== '仍然尝试切换') {
+            if (action !== 'Tetep nekat ganti') {
                 return;
             }
         } else if (envCheck.suggestions.length > 0) {
-            // 有警告信息，但不是致命问题
+            // Ada seruan awas, tp ga bahaya la
             const warnMessage = envCheck.suggestions.join('\n');
             const action = await vscode.window.showWarningMessage(
-                `⚠️ 环境检查发现以下警告：\n\n${warnMessage}\n\n是否继续切换？`,
+                `!! Uji envi menemukan peringatan:\n\n${warnMessage}\n\nMau dihajar terus lanjut gantinya?`,
                 { modal: true },
-                '继续',
-                '取消'
+                'Lanjutkan',
+                'Batal'
             );
 
-            if (action !== '继续') {
+            if (action !== 'Lanjutkan') {
                 return;
             }
         }
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "正在切换 Antigravity 账号",
+            title: "Tengah memindahkan rute Antigravity Akun",
             cancellable: false
         }, async (progress) => {
             try {
-                progress.report({ message: "正在加载账号信息..." });
+                progress.report({ message: "Sedang dimuatAkuninfo..." });
                 const account = AccountManager.loadAccount(accountId);
-                if (!account.token) { throw new Error("该账号暂无 Token"); }
+                if (!account.token) { throw new Error("AsetAkunKaga ada Tokennya"); }
 
                 // Check/Refresh token
-                let token = account.token;
+                const token = account.token;
                 if (Date.now() / 1000 > token.expiry_timestamp - 300) {
-                    progress.report({ message: "正在刷新 Token..." });
+                    progress.report({ message: "Tengah mengusap Token..." });
                     const refreshed = await AccountManager.refreshToken(token.refresh_token);
                     token.access_token = refreshed.accessToken;
                     token.expiry_timestamp = Math.floor(Date.now() / 1000) + refreshed.expiresIn;
@@ -538,17 +539,17 @@ export function activate(context: vscode.ExtensionContext) {
                     AccountManager.saveAccount(account);
                 }
 
-                progress.report({ message: "准备外部代理切换流程..." });
+                progress.report({ message: "Berkemas demi oper proksi ranah luar..." });
 
-                // 更新当前账号索引 (这部分可以先做，因为它是插件自己的配置文件)
+                // [Komentar/Teks terjemahan]Akun Saat iniIndeks (gasskeun yg ini duly, brg plugin sendiri punyaKonfigurasi pengaturanberkas)
                 const index = AccountManager.loadIndex();
                 index.current_account_id = accountId;
                 AccountManager.saveIndex(index);
 
-                // 读取配置中的等待时间
+                // MembacaKonfigurasi pengaturanpunya waktu senggang rehat
                 const processWaitSeconds = config.get<number>('processWaitSeconds', 10);
 
-                // 启动外部代理接管后续的 Kill -> Inject -> Restart
+                // Lepas proksi dr luar buat ngambil alih Kill->Inject->Restart
                 await SwitcherProxy.executeExternalSwitch(
                     token.access_token,
                     token.refresh_token,
@@ -559,12 +560,12 @@ export function activate(context: vscode.ExtensionContext) {
                     processWaitSeconds
                 );
 
-                progress.report({ message: "正在请求 IDE 退出并重启..." });
+                progress.report({ message: "Asik nodong IDE suruh cabut terus balik lg..." });
 
-                // 等待一小会儿确保代理脚本已启动
+                // Tunggu sebentar untuk memastikan skrip proxy berjalan
                 await new Promise(resolve => setTimeout(resolve, 800));
 
-                // 主动命令 IDE 退出 (双重保险)
+                // Perintahkan IDE agar keluar (asuransi ganda)
                 try {
                     await vscode.commands.executeCommand('workbench.action.quit');
                 } catch (e) {
@@ -574,16 +575,16 @@ export function activate(context: vscode.ExtensionContext) {
                 accountTreeProvider.refresh();
                 DashboardProvider.refresh();
             } catch (e) {
-                vscode.window.showErrorMessage(`切换失败: ${(e as Error).message}`);
+                vscode.window.showErrorMessage(`Gagal beralih: ${(e as Error).message}`);
             }
         });
     });
 
-    let openDashboardCommand = vscode.commands.registerCommand('antigravity-cockpit.openDashboard', () => {
+    const openDashboardCommand = vscode.commands.registerCommand('antigravity-cockpit.openDashboard', () => {
         DashboardProvider.createOrShow(context.extensionUri);
     });
 
-    let refreshAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAccount', async (accountId: string) => {
+    const refreshAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAccount', async (accountId: string) => {
         try {
             const account = AccountManager.loadAccount(accountId);
             if (account.token) {
@@ -592,47 +593,47 @@ export function activate(context: vscode.ExtensionContext) {
                 account.token.expiry_timestamp = Math.floor(Date.now() / 1000) + refreshed.expiresIn;
                 AccountManager.saveAccount(account);
                 accountTreeProvider.refresh();
-                DashboardProvider.refresh(); // 刷新设置面板
-                updateStatusBar(); // 同步刷新状态栏限额数据
-                vscode.window.showInformationMessage(`已刷新账号 ${account.email}`);
+                DashboardProvider.refresh(); // Perbaiki panel pengaturan
+                updateStatusBar(); // Sinkronisasi data kuota status bar
+                vscode.window.showInformationMessage(`Akun telah di-refresh ${account.email}`);
             }
         } catch (e) {
-            vscode.window.showErrorMessage(`刷新失败: ${(e as Error).message}`);
+            vscode.window.showErrorMessage(`Gagal refresh: ${(e as Error).message}`);
         }
     });
 
-    let deleteAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.deleteAccount', async (item: any) => {
+    const deleteAccountCommand = vscode.commands.registerCommand('antigravity-cockpit.deleteAccount', async (item: any) => {
         const accountId = item.accountId;
-        const email = item.email || '未命名账号';
+        const email = item.email || 'Akun Tak Bernama';
 
         if (!accountId) { return; }
 
         const confirm = await vscode.window.showWarningMessage(
-            `确定要删除账号 ${email} 吗？此操作无法撤销。`,
+            `Apakah Anda yakin ingin menghapus akun ${email} ? Operasi ini tidak dapat dibatalkan.`,
             { modal: true },
-            '确定'
+            'Konfirmasi'
         );
 
-        if (confirm !== '确定') { return; }
+        if (confirm !== 'Konfirmasi') { return; }
 
         try {
             AccountManager.deleteAccount(accountId);
 
-            // 如果删除了当前账号，更新状态栏
+            // Jika menghapus akun saat ini, perbarui status bar
             updateStatusBar();
 
             accountTreeProvider.refresh();
             DashboardProvider.refresh();
-            vscode.window.showInformationMessage(`账号 ${email} 已删除`);
+            vscode.window.showInformationMessage(`Akun ${email} telah dihapus`);
         } catch (e) {
-            vscode.window.showErrorMessage(`删除失败: ${(e as Error).message}`);
+            vscode.window.showErrorMessage(`Gagal menghapus: ${(e as Error).message}`);
         }
     });
 
-    let refreshAllAccountsCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAllAccounts', async () => {
+    const refreshAllAccountsCommand = vscode.commands.registerCommand('antigravity-cockpit.refreshAllAccounts', async () => {
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: "正在刷新所有账号信息...",
+            title: "[Komentar/Teks terjemahan]Akuninfo...",
             cancellable: false
         }, async () => {
             const index = AccountManager.loadIndex();
@@ -646,26 +647,26 @@ export function activate(context: vscode.ExtensionContext) {
                         AccountManager.saveAccount(account);
                     }
                 } catch (e) {
-                    console.error(`无法刷新 ${accSum.email}`, e);
+                    console.error(`Tidak dapat me-refresh ${accSum.email}`, e);
                 }
             }
             accountTreeProvider.refresh();
-            DashboardProvider.refresh(); // 刷新设置面板
-            updateStatusBar(); // 同步刷新状态栏限额数据
-            vscode.window.showInformationMessage('所有账号信息已更新');
+            DashboardProvider.refresh(); // Perbaiki panel pengaturan
+            updateStatusBar(); // Sinkronisasi data kuota status bar
+            vscode.window.showInformationMessage('[Komentar/Teks terjemahan]Akun[Komentar/Teks terjemahan]');
         });
     });
 
-    // 打开外部切换代理日志目录（ag_switch_*.log 所在的临时目录）
-    let openSwitchLogsCommand = vscode.commands.registerCommand('antigravity-cockpit.openSwitchLogs', async () => {
+    // Buka direktori log agen pengalih eksternal(ag_switch_*.log [Komentar/Teks terjemahan])
+    const openSwitchLogsCommand = vscode.commands.registerCommand('antigravity-cockpit.openSwitchLogs', async () => {
         const tempDir = os.tmpdir();
         const uri = vscode.Uri.file(tempDir);
         await vscode.env.openExternal(uri);
-        vscode.window.showInformationMessage('已打开系统临时目录，请查找最新的 ag_switch_*.log 日志文件。');
+        vscode.window.showInformationMessage('Direktori sementara sistem telah dibuka, silakan cari file log ag_switch_*.log terbaru.');
     });
 
-    // 环境自检命令
-    let diagnoseEnvironmentCommand = vscode.commands.registerCommand('antigravity-cockpit.diagnoseEnvironment', async () => {
+    // Perintah diagnostik lingkungan
+    const diagnoseEnvironmentCommand = vscode.commands.registerCommand('antigravity-cockpit.diagnoseEnvironment', async () => {
         const { execSync } = require('child_process');
         const fs = require('fs');
         const path = require('path');
@@ -673,12 +674,12 @@ export function activate(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('antigravity-cockpit');
 
         const results: string[] = [];
-        results.push('## Antigravity Multi-Account Cockpit 环境自检报告\n');
+        results.push('## Antigravity Multi-Account Cockpit Laporan Diagnostik Lingkungan\n');
 
-        // 1. Node.js 检测
-        results.push('### 1. Node.js 环境');
+        // 1. Node.js [Komentar/Teks terjemahan]
+        results.push('### 1. Node.js [Komentar/Teks terjemahan]');
         let nodePath = '';
-        let nodeStatus = '❌ 未找到';
+        let nodeStatus = '❌ Tidak ketemu';
         try {
             if (platform === 'win32') {
                 try {
@@ -686,58 +687,58 @@ export function activate(context: vscode.ExtensionContext) {
                     const lines = result.trim().split('\n');
                     if (lines.length > 0 && fs.existsSync(lines[0].trim())) {
                         nodePath = lines[0].trim();
-                        nodeStatus = '✅ 已找到';
+                        nodeStatus = '✅ Ketemu';
                     }
                 } catch (e) {
-                    // 忽略
+                    // Abaikan
                 }
             } else {
                 nodePath = execSync('which node', { encoding: 'utf-8' }).trim();
                 if (nodePath && fs.existsSync(nodePath)) {
-                    nodeStatus = '✅ 已找到';
+                    nodeStatus = '✅ Ketemu';
                 }
             }
         } catch (e) {
-            nodeStatus = '❌ 检测失败';
+            nodeStatus = '❌ Gagal melacak';
         }
-        results.push(`- 状态: ${nodeStatus}`);
+        results.push(`- Status: ${nodeStatus}`);
         if (nodePath) {
-            results.push(`- 路径: \`${nodePath}\``);
+            results.push(`- Direktori: \`${nodePath}\``);
         }
         results.push('');
 
-        // 2. 数据库路径检测
-        results.push('### 2. Antigravity IDE 数据库');
+        // 2. Basis data[Komentar/Teks terjemahan]
+        results.push('### 2. Antigravity IDE Basis data');
         const { getVSCDBPath } = require('./constants');
         const dbPathOverride = config.get<string>('databasePathOverride', '');
         const actualDbPath = dbPathOverride && dbPathOverride.trim() ? dbPathOverride.trim() : getVSCDBPath();
         const dbExists = fs.existsSync(actualDbPath);
-        results.push(`- 路径: \`${actualDbPath}\``);
-        results.push(`- 状态: ${dbExists ? '✅ 存在' : '⚠️ 不存在（IDE 可能未安装或未启动过）'}`);
+        results.push(`- Direktori: \`${actualDbPath}\``);
+        results.push(`- Status: ${dbExists ? '✅ [Komentar/Teks terjemahan]' : '⚠️ [Komentar/Teks terjemahan]Tersedia (mungkin ga keinstal)'}`);
         if (dbPathOverride) {
-            results.push(`- 配置覆盖: \`${dbPathOverride}\``);
+            results.push(`- Tindihan Konfigurasi Pengaturan: \`${dbPathOverride}\``);
         }
         results.push('');
 
-        // 3. Antigravity 可执行文件检测
-        results.push('### 3. Antigravity IDE 可执行文件');
+        // 3. Antigravity File bs di run[Komentar/Teks terjemahan]
+        results.push('### 3. Eksekutabel IDE Antigravity');
         const exePathConfig = config.get<{ win32?: string; darwin?: string; linux?: string }>('antigravityExecutablePath', {});
         let exePath = '';
-        let exeStatus = '❌ 未找到';
+        let exeStatus = '❌ Tidak ketemu';
 
         if (platform === 'win32') {
             exePath = exePathConfig.win32 && exePathConfig.win32.trim()
                 ? exePathConfig.win32.trim()
                 : path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Antigravity', 'Antigravity.exe');
             if (fs.existsSync(exePath)) {
-                exeStatus = '✅ 已找到';
+                exeStatus = '✅ Ketemu';
             }
         } else if (platform === 'darwin') {
             exePath = exePathConfig.darwin && exePathConfig.darwin.trim()
                 ? exePathConfig.darwin.trim()
                 : '/Applications/Antigravity.app';
             if (fs.existsSync(exePath)) {
-                exeStatus = '✅ 已找到';
+                exeStatus = '✅ Ketemu';
             }
         } else {
             // Linux
@@ -747,36 +748,36 @@ export function activate(context: vscode.ExtensionContext) {
             for (const p of possiblePaths) {
                 if (fs.existsSync(p)) {
                     exePath = p;
-                    exeStatus = '✅ 已找到';
+                    exeStatus = '✅ Ketemu';
                     break;
                 }
             }
         }
 
-        results.push(`- 状态: ${exeStatus}`);
+        results.push(`- Status: ${exeStatus}`);
         if (exePath) {
-            results.push(`- 路径: \`${exePath}\``);
+            results.push(`- Direktori: \`${exePath}\``);
         }
         if (Object.keys(exePathConfig).length > 0) {
-            results.push(`- 配置覆盖: ${JSON.stringify(exePathConfig)}`);
+            results.push(`- Tindihan Konfigurasi Pengaturan: ${JSON.stringify(exePathConfig)}`);
         }
         results.push('');
 
-        // 4. 平台信息
-        results.push('### 4. 平台信息');
-        results.push(`- 操作系统: \`${platform}\``);
-        results.push(`- 架构: \`${os.arch()}\``);
+        // 4. Info platform
+        results.push('### 4. Info platform');
+        results.push(`- OS: \`${platform}\``);
+        results.push(`- Arsitektur: \`${os.arch()}\``);
         results.push('');
 
-        // 5. 配置信息
-        results.push('### 5. 当前配置');
+        // 5. Info Konfigurasi Pengaturan
+        results.push('### 5. Setingan mutakhir');
         const switchMode = config.get<string>('switchMode', 'advanced');
         const autoRefreshInterval = config.get<number>('autoRefreshInterval', 5);
-        results.push(`- 切换模式: \`${switchMode}\``);
-        results.push(`- 自动刷新间隔: \`${autoRefreshInterval} 分钟\``);
+        results.push(`- Mode ubah: \`${switchMode}\``);
+        results.push(`- Interval jeda otomatis: \`${autoRefreshInterval} menit\``);
         results.push('');
 
-        // 显示结果
+        // Tampilkan output
         const report = results.join('\n');
         const doc = await vscode.workspace.openTextDocument({
             content: report,
@@ -784,14 +785,14 @@ export function activate(context: vscode.ExtensionContext) {
         });
         await vscode.window.showTextDocument(doc);
 
-        // 提供复制按钮
+        // Sediakan tombol copas
         const action = await vscode.window.showInformationMessage(
-            '环境自检报告已生成。',
-            '复制报告'
+            'Laporan sdh terbit.',
+            'Salin Laporan'
         );
-        if (action === '复制报告') {
+        if (action === 'Salin Laporan') {
             await vscode.env.clipboard.writeText(report);
-            vscode.window.showInformationMessage('报告已复制到剪贴板。');
+            vscode.window.showInformationMessage('Laporan telah disalin ke clipboard.');
         }
     });
 
@@ -807,24 +808,24 @@ export function activate(context: vscode.ExtensionContext) {
         diagnoseEnvironmentCommand
     );
 
-    // --- 启动时自动同步 IDE 真实登录状态 ---
+    // --- Saat menyala sinkronisasi status login orisinal IDE ---
     setTimeout(async () => {
         try {
-            console.log('正在检查 IDE 数据库中的真实登录状态...');
+            console.log('Sedang memeriksa status login asli di database IDE...');
 
-            // 增加重试机制：尝试读取数据库 10 次，每次间隔 4 秒
-            // 应对 IDE 刚启动时数据库可能被锁定的情况
+            // Menambahkan mekanisme coba ulang: coba membaca database 10 kali, setiap interval 4 detik
+            // Menangani situasi di mana database IDE mungkin terkunci saat baru dimulai
             let dbTokenInfo: { access_token: string; refresh_token: string; expiry: number; } | null = null;
 
             for (let i = 0; i < 10; i++) {
                 try {
                     dbTokenInfo = await DBManager.readFullTokenInfo();
                     if (dbTokenInfo) {
-                        console.log('成功读取 IDE 数据库。');
+                        console.log('Berhasil membaca database IDE.');
                         break;
                     }
                 } catch (readErr) {
-                    console.warn(`第 ${i + 1} 次读取 IDE 数据库失败:`, readErr);
+                    console.warn(`Nomer ${i + 1} Gagal baca basis data IDE:`, readErr);
                 }
                 if (i < 9) {
                     await new Promise(r => setTimeout(r, 4000));
@@ -836,7 +837,7 @@ export function activate(context: vscode.ExtensionContext) {
                 let foundAccount: Account | undefined;
                 let foundInLocal = false;
 
-                // 1. 尝试精确 Token 匹配 (快速)
+                // 1. Mencoba pencocokan Token yang presisi (cepat)
                 for (const accSum of index.accounts) {
                     try {
                         const acc = AccountManager.loadAccount(accSum.id);
@@ -848,10 +849,10 @@ export function activate(context: vscode.ExtensionContext) {
                     } catch (e) { /* ignore */ }
                 }
 
-                // 2. 如果 Token 不匹配，尝试通过 API 验证身份
+                // 2. Jika Token tidak cocok, coba verifikasi identitas melalui API
                 if (!foundAccount) {
                     try {
-                        // 使用 IDE 中的 Token 去请求用户信息
+                        // Gunakan Token di IDE untuk meminta informasi pengguna
                         const res = await axios.get(USERINFO_URL, {
                             headers: { Authorization: `Bearer ${dbTokenInfo.access_token}` },
                             timeout: 5000
@@ -860,12 +861,12 @@ export function activate(context: vscode.ExtensionContext) {
                         const email = userInfo.email;
 
                         if (email) {
-                            // 通过 Email 查找本地账号
+                            // Cari akun lokal via Email
                             for (const accSum of index.accounts) {
                                 if (accSum.email === email) {
                                     foundAccount = AccountManager.loadAccount(accSum.id);
                                     foundInLocal = true;
-                                    // 顺便更新本地 Token
+                                    // Sekalian perbarui Token lokal
                                     if (foundAccount.token) {
                                         foundAccount.token = {
                                             access_token: dbTokenInfo.access_token,
@@ -879,9 +880,9 @@ export function activate(context: vscode.ExtensionContext) {
                                 }
                             }
 
-                            // 3. 如果本地也没有，自动创建新账号 (Auto Import)
+                            // 3. Jika lokal tak ada, buat otomatis akun baru (Impor Otomoatis)
                             if (!foundAccount) {
-                                console.log(`发现新账号 ${email}，正在自动导入...`);
+                                console.log(`Temukan akun baru ${email}, Sedang mengimpor otoma...`);
                                 const accountId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
                                 const newAccount: Account = {
                                     id: accountId,
@@ -911,39 +912,39 @@ export function activate(context: vscode.ExtensionContext) {
 
                                 foundAccount = newAccount;
                                 foundInLocal = true;
-                                vscode.window.showInformationMessage(`已自动导入 IDE 当前账号: ${email}`);
+                                vscode.window.showInformationMessage(`Telah impor otomatis akun IDE: ${email}`);
                             }
                         }
                     } catch (e) {
-                        console.warn('无法验证 IDE 数据库中的 Token 身份:', e);
+                        console.warn('Tidak dapat memverifikasi identitas Token di database IDE:', e);
                     }
                 }
 
                 if (foundAccount) {
                     if (foundAccount.id !== index.current_account_id) {
-                        // 发现不一致，执行切换
+                        // Menemukan ketidaksesuaian, lakukan peralihan
                         index.current_account_id = foundAccount.id;
                         AccountManager.saveIndex(index);
 
-                        // 刷新 UI
+                        // Perbarui UI
                         accountTreeProvider.refresh();
                         DashboardProvider.refresh();
                         updateStatusBar();
 
-                        vscode.window.showInformationMessage(`已自动同步当前账号为: ${foundAccount.email}`);
+                        vscode.window.showInformationMessage(`Telah Sinkron Otomatis Akun Ke: ${foundAccount.email}`);
                     } else {
-                        console.log('插件状态与 IDE 数据库一致。');
+                        console.log('Status plugin sesuai dengan database IDE.');
                     }
                 } else {
-                    console.log('IDE 中登录的是未知账号且无法获取信息，跳过同步。');
+                    console.log('IDE akun tidak dikenal & tiada info, skip...');
                 }
             } else {
-                console.log('无法从 IDE 数据库读取 Token，跳过同步。');
+                console.log('Tidak dapat membaca Token dari database IDE, lewati sinkronisasi.');
             }
         } catch (e) {
-            console.error('自动同步状态失败:', e);
+            console.error('Gagal sinkronisasi status otomatis:', e);
         }
-    }, 8000); // 延迟 8 秒执行，等待 IDE 完全初始化
+    }, 8000); // Tunda 8 detik eksekusi, tunggu inisialisasi IDE sepenuhnya
 }
 
 async function performOAuth(): Promise<any> {
@@ -953,18 +954,18 @@ async function performOAuth(): Promise<any> {
             const pathname = parsedUrl.pathname;
             const queryObject = parsedUrl.query;
 
-            // 忽略图标请求
+            // Abaikan permintaan ikon
             if (pathname === '/favicon.ico') {
                 res.writeHead(404);
                 res.end();
                 return;
             }
 
-            // 只处理授权回调路径
+            // Hanya proses rute callback otorisasi
             if (pathname === '/oauth-callback') {
                 if (queryObject.code) {
                     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                    res.end('<h1>✅ 授权成功!</h1><p>您可以关闭此窗口返回 VS Code。</p><script>setTimeout(function() { window.close(); }, 2000);</script>');
+                    res.end('<h1>✅ Otorisasi Berhasil!</h1><p>Anda dapat menutup jendela ini dan kembali ke VS Code.</p><script>setTimeout(function() { window.close(); }, 2000);</script>');
 
                     try {
                         const response = await axios.post(TOKEN_URL, {
@@ -982,9 +983,9 @@ async function performOAuth(): Promise<any> {
                     }
                 } else if (queryObject.error) {
                     res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
-                    res.end(`<h1>❌ 授权失败</h1><p>${queryObject.error}</p>`);
+                    res.end(`<h1>❌ Otorisasi Gagal</h1><p>${queryObject.error}</p>`);
                     server.close();
-                    reject(new Error(`授权服务返回错误: ${queryObject.error}`));
+                    reject(new Error(`Layanan otorisasi mengembalikan kesalahan: ${queryObject.error}`));
                 }
             }
         });
@@ -1003,10 +1004,10 @@ async function performOAuth(): Promise<any> {
             });
             const authUrl = `${AUTH_URL}?${params.toString()}`;
 
-            const copy = '复制链接';
-            const open = '在默认浏览器打开';
+            const copy = 'Salin Tautan';
+            const open = 'Buka di Browser Default';
             const result = await vscode.window.showInformationMessage(
-                '🔐 请在浏览器中完成 Google 授权。授权完成后将自动同步账号。',
+                '🔐 Gassin otorisasi Google di peramban, ntar Sinkron otomatis.',
                 { modal: true },
                 open,
                 copy
@@ -1014,13 +1015,13 @@ async function performOAuth(): Promise<any> {
 
             if (result === copy) {
                 await vscode.env.clipboard.writeText(authUrl);
-                vscode.window.showInformationMessage('✅ 授权链接已复制到剪贴板，请在浏览器中粘贴访问。');
+                vscode.window.showInformationMessage('✅ Tautan otorisasi telah disalin ke clipboard, silakan tempel dan kunjungi di browser.');
             } else if (result === open) {
                 vscode.env.openExternal(vscode.Uri.parse(authUrl));
             } else {
-                // 用户取消，关闭服务器
+                // Pengguna batal, matikan server
                 server.close();
-                reject(new Error('用户取消授权'));
+                reject(new Error('Pengguna membatalkan otorisasi'));
                 return;
             }
         });
@@ -1028,7 +1029,7 @@ async function performOAuth(): Promise<any> {
         setTimeout(() => {
             if (server.listening) {
                 server.close();
-                reject(new Error('授权超时，请重试。'));
+                reject(new Error('Waktu otorisasi habis, silakan coba lagi.'));
             }
         }, 300000);
     });

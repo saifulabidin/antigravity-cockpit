@@ -1,8 +1,8 @@
 {
   "name": "antigravity-cockpit-multi-account",
   "displayName": "Antigravity Multi-Account Cockpit",
-  "description": "Antigravity 多账号切换与配额管理助手",
-  "version": "2.1.0",
+  "description": "Asisten Manajemen Kuota dan Penggantian Multi-Akun Antigravity",
+  "version": "2.1.1",
   "publisher": "Wanow",
   "icon": "resources/icon.png",
   "repository": {
@@ -23,37 +23,37 @@
     "commands": [
       {
         "command": "antigravity-cockpit.refreshAccounts",
-        "title": "刷新账号列表",
+        "title": "Refresh Daftar Akun",
         "icon": "$(refresh)"
       },
       {
         "command": "antigravity-cockpit.switchAccount",
-        "title": "切换账号"
+        "title": "Ganti Akun"
       },
       {
         "command": "antigravity-cockpit.refreshAccount",
-        "title": "刷新此账号"
+        "title": "Refresh Akun Ini"
       },
       {
         "command": "antigravity-cockpit.refreshAllAccounts",
-        "title": "刷新所有账号"
+        "title": "Refresh Semua Akun"
       },
       {
         "command": "antigravity-cockpit.openDashboard",
-        "title": "打开账号管理面板"
+        "title": "Buka Panel Manajemen Akun"
       },
       {
         "command": "antigravity-cockpit.addAccount",
-        "title": "添加账号",
+        "title": "Tambah Akun",
         "icon": "$(add)"
       },
       {
         "command": "antigravity-cockpit.openSwitchLogs",
-        "title": "Antigravity Cockpit: 打开账号切换日志目录"
+        "title": "Antigravity Cockpit: Buka Direktori Log Ganti Akun"
       },
       {
         "command": "antigravity-cockpit.diagnoseEnvironment",
-        "title": "Antigravity Cockpit: 环境自检"
+        "title": "Antigravity Cockpit: Diagnosis Lingkungan"
       }
     ],
     "configuration": {
@@ -64,7 +64,7 @@
           "default": 5,
           "minimum": 1,
           "maximum": 60,
-          "description": "自动刷新账户配额信息的时间间隔（分钟）。设置为 0 禁用自动刷新。"
+          "description": "Interval waktu untuk refresh informasi kuota akun secara otomatis (dalam menit). Setel ke 0 untuk menonaktifkan refresh otomatis."
         },
         "antigravity-cockpit.switchMode": {
           "type": "string",
@@ -73,12 +73,12 @@
             "advanced"
           ],
           "default": "advanced",
-          "description": "账号切换模式：safe 仅切换插件内当前账号并提示手动重启 IDE；advanced 会调用外部代理进程执行 Kill → 注入数据库 → 自动重启 IDE 的完整流程。"
+          "description": "Mode penggantian akun: safe hanya mengganti akun saat ini di dalam plugin dan meminta pengguna untuk merestart IDE secara manual; advanced akan memanggil agen eksternal untuk menjalankan proses penuh dari Kill -> Injeksi Database -> Restart Otomatis IDE."
         },
         "antigravity-cockpit.databasePathOverride": {
           "type": "string",
           "default": "",
-          "description": "Antigravity IDE 全局状态数据库路径覆盖（留空则使用平台默认路径）。示例：C:\\Users\\xxx\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\state.vscdb"
+          "description": "Langkah mengesampingkan jalur basis data status global Antigravity IDE (kosongkan untuk menggunakan jalur default platform). Contoh: C:\\Users\\xxx\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\state.vscdb"
         },
         "antigravity-cockpit.antigravityExecutablePath": {
           "type": "object",
@@ -86,17 +86,17 @@
             "win32": {
               "type": "string",
               "default": "",
-              "description": "Windows 平台 Antigravity.exe 路径覆盖（留空则使用默认路径 LOCALAPPDATA\\Programs\\Antigravity\\Antigravity.exe）"
+              "description": "Langkah mengesampingkan jalur Antigravity.exe pada platform Windows (kosongkan untuk menggunakan jalur default LOCALAPPDATA\\Programs\\Antigravity\\Antigravity.exe)"
             },
             "darwin": {
               "type": "string",
               "default": "",
-              "description": "macOS 平台 Antigravity.app 路径覆盖（留空则使用默认路径 /Applications/Antigravity.app）"
+              "description": "Penimpaan jalur Antigravity.app untuk macOS (kosongkan jika menggunakan jalur default /Applications/Antigravity.app)"
             },
             "linux": {
               "type": "string",
               "default": "",
-              "description": "Linux 平台 Antigravity 可执行文件路径覆盖（留空则尝试多个常见路径）"
+              "description": "Penimpaan jalur executable Antigravity untuk Linux (kosongkan jika mencoba beberapa jalur umum)"
             }
           }
         },
@@ -105,7 +105,7 @@
           "default": 10,
           "minimum": 5,
           "maximum": 60,
-          "description": "账号切换时等待进程关闭/启动的时间（秒）。低配置机器建议设置为 20-30 秒。"
+          "description": "Waktu menunggu proses dimatikan/dihidupkan saat mengganti akun (dalam detik). Untuk komputer spesifikasi rendah, disarankan 20-30 detik."
         }
       }
     }
@@ -115,7 +115,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src",
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {

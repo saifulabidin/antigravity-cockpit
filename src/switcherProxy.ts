@@ -14,10 +14,10 @@ export interface EnvironmentCheckResult {
 
 export class SwitcherProxy {
     /**
-     * 预检查切换所需的运行环境
-     * @param dbPathOverride 数据库路径覆盖（可选）
-     * @param exePathOverride IDE 可执行文件路径覆盖（可选）
-     * @returns 检查结果，包含各项状态和修复建议
+     * Pemeriksaan awal lingkungan yang diperlukan
+     * @param dbPathOverride Timpa jalur basis data (opsional)
+     * @param exePathOverride Timpa executable IDE (opsional)
+     * @returns Hasil cek, status dan saran perbaikan
      */
     static checkEnvironment(
         dbPathOverride?: string,
@@ -33,7 +33,7 @@ export class SwitcherProxy {
             suggestions: []
         };
 
-        // 1. 检查 Node.js
+        // 1. Cek Node.js
         let nodeExe = '';
         if (platform === 'win32') {
             const possibleNodePaths = [
@@ -60,7 +60,7 @@ export class SwitcherProxy {
                         nodeExe = lines[0].trim();
                     }
                 } catch (e) {
-                    // 忽略
+                    // Abaikan
                 }
             }
         } else {
@@ -76,23 +76,23 @@ export class SwitcherProxy {
         if (nodeExe && fs.existsSync(nodeExe)) {
             result.nodeJs = { ok: true, path: nodeExe };
         } else {
-            result.nodeJs = { ok: false, error: '未找到 Node.js' };
+            result.nodeJs = { ok: false, error: 'Node.js tidak ada' };
             result.success = false;
-            result.suggestions.push('❌ 请安装 Node.js: https://nodejs.org/ (建议 LTS 版本)');
+            result.suggestions.push('❌ Silakan instal Node.js: https://nodejs.org/ (saran LTS)');
         }
 
-        // 2. 检查 npm (用于备用安装 sqlite3)
+        // 2. Cek npm (untuk cadangan instal sqlite3)
         try {
             const npmCmd = platform === 'win32' ? 'npm.cmd --version' : 'npm --version';
             const npmVersion = execSync(npmCmd, { encoding: 'utf-8', windowsHide: true }).trim();
             result.npm = { ok: true, version: npmVersion };
         } catch (e) {
-            result.npm = { ok: false, error: 'npm 不可用' };
-            // npm 不是必须的，只是备用方案，不影响 success
-            result.suggestions.push('⚠️ npm 未安装或不可用。如果 sqlite3 模块不兼容，将无法自动修复。建议安装 Node.js 完整版。');
+            result.npm = { ok: false, error: 'npm tidak tersedia' };
+            // npm tidak wajib, cuma cadangan, tidak menolak success
+            result.suggestions.push('⚠️ npm tak diinstal atau tak bisa dipakai. Jika modul sqlite3 tak kompatibel, tak bisa otomatis perbaiki. Instal Node lengkap');
         }
 
-        // 3. 检查数据库文件
+        // 3. Cek file basis data
         const actualDbPath = dbPathOverride && dbPathOverride.trim()
             ? dbPathOverride.trim()
             : getVSCDBPath();
@@ -100,13 +100,13 @@ export class SwitcherProxy {
         if (fs.existsSync(actualDbPath)) {
             result.database = { ok: true, path: actualDbPath };
         } else {
-            result.database = { ok: false, path: actualDbPath, error: '数据库文件不存在' };
+            result.database = { ok: false, path: actualDbPath, error: 'File basis data tidak ada' };
             result.success = false;
-            result.suggestions.push(`❌ Antigravity IDE 数据库不存在: ${actualDbPath}`);
-            result.suggestions.push('   请确保已安装并至少启动过一次 Antigravity IDE');
+            result.suggestions.push(`❌ Antigravity IDE Basis data tak ada: ${actualDbPath}`);
+            result.suggestions.push('   Yakinkan terinstal dan setidaknya menyala sekali');
         }
 
-        // 4. 检查 IDE 可执行文件
+        // 4. Cek executable IDE
         let idePath = '';
         if (platform === 'win32') {
             idePath = exePathOverride?.win32?.trim() ||
@@ -129,49 +129,49 @@ export class SwitcherProxy {
         if (idePath && fs.existsSync(idePath)) {
             result.ide = { ok: true, path: idePath };
         } else {
-            result.ide = { ok: false, path: idePath, error: 'IDE 可执行文件不存在' };
-            // IDE 路径问题不是致命的，可以通过协议启动
-            result.suggestions.push(`⚠️ Antigravity IDE 可执行文件未找到: ${idePath || '(未知)'}`);
-            result.suggestions.push('   切换后可能需要手动启动 IDE');
+            result.ide = { ok: false, path: idePath, error: 'Executable IDE tidak ditemukan' };
+            // Masalah jalur IDE bukan hal fatal, bisa start via protokol
+            result.suggestions.push(`⚠️ Antigravity IDE Executable tak ketemu: ${idePath || '(Tak dikenal)'}`);
+            result.suggestions.push('   Usai bergeser, mungkin lu butuh nyalain IDE manual');
         }
 
         return result;
     }
 
     /**
-     * 格式化环境检查结果为用户可读的消息
+     * Format hasil cek lingkungan ke pesan gampang dibaca
      */
     static formatCheckResult(result: EnvironmentCheckResult): string {
         const lines: string[] = [];
-        lines.push('### 环境检查结果\n');
+        lines.push('### Laporan cek lingkungan\n');
 
         lines.push(`- Node.js: ${result.nodeJs.ok ? '✅ ' + result.nodeJs.path : '❌ ' + result.nodeJs.error}`);
         lines.push(`- npm: ${result.npm.ok ? '✅ v' + result.npm.version : '⚠️ ' + result.npm.error}`);
-        lines.push(`- 数据库: ${result.database.ok ? '✅ 存在' : '❌ ' + result.database.error}`);
-        lines.push(`- IDE: ${result.ide.ok ? '✅ 存在' : '⚠️ ' + result.ide.error}`);
+        lines.push(`- Basis data: ${result.database.ok ? '✅ Ada' : '❌ ' + result.database.error}`);
+        lines.push(`- IDE: ${result.ide.ok ? '✅ Ada' : '⚠️ ' + result.ide.error}`);
 
         if (result.suggestions.length > 0) {
-            lines.push('\n### 建议\n');
+            lines.push('\n### Saran\n');
             lines.push(result.suggestions.join('\n'));
         }
 
         return lines.join('\n');
     }
     /**
-     * 创建并在外部执行一个独立脚本，接管账号切换的后续工作。
-     * 跨平台支持 (Windows/Linux/macOS)
+     * Buat & eksekusi skrip otonom, urus ganti akun
+     * Lintas-platform suport (Windows/Linux/macOS)
      * 
-     * 流程：
-     * 1. 生成独立的 Node.js 脚本（包含完整的注入逻辑）
-     * 2. 使用平台特定方式启动独立进程
-     * 3. 独立进程监测 IDE 进程关闭 -> 等待 -> 注入 -> 启动
+     * Proses:
+     * 1. Bikin skrip Node otonom (isi logik injeksi)
+     * 2. Berangkatkan proses mandiri ala platform ini
+     * 3. Proses memantau tutup IDE -> nunggu -> suntik -> start
      * 
      * @param accessToken OAuth access token
      * @param refreshToken OAuth refresh token
-     * @param expiry Token 过期时间戳（秒）
-     * @param dbPathOverride 数据库路径覆盖（可选）
-     * @param exePathOverride Antigravity 可执行文件路径覆盖（可选，按平台）
-     * @param processWaitSeconds 进程关闭/启动等待时间（秒，默认10秒，低配机器建议20-30秒）
+     * @param expiry Waktu kadaluwarsa token (detik)
+     * @param dbPathOverride Timpa jalur basis data (opsional)
+     * @param exePathOverride Timpa executable Antigravity (opsional, via platform)
+     * @param processWaitSeconds Proses Tutup/Buka Durasi (detik, default 10)
      */
     static async executeExternalSwitch(
         accessToken: string,
@@ -180,24 +180,24 @@ export class SwitcherProxy {
         email: string,
         dbPathOverride?: string,
         exePathOverride?: { win32?: string; darwin?: string; linux?: string },
-        processWaitSeconds: number = 10
+        processWaitSeconds = 10
     ) {
         const tempDir = os.tmpdir();
         const timestamp = Date.now();
         const mainScriptPath = path.join(tempDir, `ag_switch_${timestamp}.js`);
         const logPath = path.join(tempDir, `ag_switch_${timestamp}.log`);
 
-        // 获取 extension 根目录下的 node_modules 路径
+        // Raih jalur extension node_modules di root
         const extensionRoot = path.join(__dirname, '..');
         const nodeModulesPath = path.join(extensionRoot, 'node_modules');
         const platform = os.platform();
 
-        // 获取 Node.js 可执行文件路径
-        // process.execPath 在 Electron 应用中返回的是 Electron 可执行文件，不是 Node.js
-        // 需要找到系统中的 Node.js
+        // Dapat executable Node
+        // process.execPath mengembalikan jalan Electron, bukan Node
+        // Perlu Node di sistem
         let nodeExe = '';
         if (platform === 'win32') {
-            // Windows: 尝试多个可能的 Node.js 路径
+            // Windows: Coba ragam jalur Node
             const possibleNodePaths = [
                 path.join(process.env.PROGRAMFILES || '', 'nodejs', 'node.exe'),
                 path.join(process.env['PROGRAMFILES(X86)'] || '', 'nodejs', 'node.exe'),
@@ -214,7 +214,7 @@ export class SwitcherProxy {
                 }
             }
 
-            // 如果找不到，尝试使用 where 命令
+            // Klo gagal temu, tes where bash
             if (!nodeExe) {
                 try {
                     const result = execSync('where node', { encoding: 'utf-8', windowsHide: true });
@@ -223,11 +223,11 @@ export class SwitcherProxy {
                         nodeExe = lines[0].trim();
                     }
                 } catch (e) {
-                    // 忽略
+                    // Abaikan
                 }
             }
         } else {
-            // Linux/macOS: 使用 which 命令
+            // Linux/OSX: Tes yang mana yang kepake
             try {
                 nodeExe = execSync('which node', { encoding: 'utf-8' }).trim();
             } catch (e) {
@@ -239,18 +239,18 @@ export class SwitcherProxy {
             throw new Error('Cannot find Node.js executable');
         }
 
-        // 获取实际使用的数据库路径
+        // Peroleh basis data yang dipake realita
         const actualDbPath = dbPathOverride && dbPathOverride.trim()
             ? dbPathOverride.trim()
             : getVSCDBPath();
 
-        // 生成跨平台的独立 Node.js 脚本
+        // Rakit skrip Node untuk lintas platform
         const mainScriptContent = `
 const fs = require('fs');
 const path = require('path');
 const { execSync, spawn } = require('child_process');
 
-// === 配置 ===
+// === Konfigurasi pengaturan ===
 const LOG_PATH = ${JSON.stringify(logPath)};
 const DB_PATH = ${JSON.stringify(actualDbPath)};
 const NODE_MODULES = ${JSON.stringify(nodeModulesPath)};
@@ -262,26 +262,26 @@ const PLATFORM = ${JSON.stringify(platform)};
 const EXE_PATH_OVERRIDE = ${JSON.stringify(exePathOverride || {})};
 const PROCESS_WAIT_SECONDS = ${processWaitSeconds};
 
-// === 日志 ===
+// === Kronik pencatatan ===
 function log(msg) {
     const ts = new Date().toISOString();
     const line = \`[\${ts}] \${msg}\\n\`;
     fs.appendFileSync(LOG_PATH, line);
-    // 控制台输出已移除，日志仅写入文件
+    // Output konsol ditebas, sisaan tergores pada dokumen log aje
 }
 
-// === 等待函数 ===
+// === Subrutin menanti ===
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// === 检测 Antigravity 进程 ===
+// === Memburu eksistensi proses Antigravity ===
 function isAntigravityRunning() {
     try {
         if (PLATFORM === 'win32') {
             const result = execSync('tasklist /FI "IMAGENAME eq Antigravity.exe" /NH 2>nul', { encoding: 'utf-8', shell: true, windowsHide: true });
             const running = result.toLowerCase().includes('antigravity.exe');
-            log('进程检测结果: ' + (running ? '运行中' : '已退出'));
+            log('Output pelacakan proses: ' + (running ? 'Tengah manggung' : 'Sudah minggat'));
             return running;
         } else {
             // Linux/macOS
@@ -289,17 +289,17 @@ function isAntigravityRunning() {
             return result.trim().length > 0;
         }
     } catch (e) {
-        log('进程检测异常: ' + (e.message || e));
+        log('Ada udang di balik batu saat mendeteksi proses: ' + (e.message || e));
         return false;
     }
 }
 
-// === 强制关闭所有 Antigravity 进程 ===
+// === Cekik mati seluruh kegiatan Antigravity ===
 function killAllAntigravity() {
-    log('正在强制关闭所有 Antigravity 进程...');
+    log('Lagi cekek mati seluruh kegiatan Antigravity');
     try {
         if (PLATFORM === 'win32') {
-            // Windows: 使用 taskkill 强制关闭所有 Antigravity.exe 进程
+            // Windows: manfaatkan taskkill eks ke exe nya
             try {
                 execSync('taskkill /F /IM Antigravity.exe /T 2>nul', { 
                     encoding: 'utf-8', 
@@ -307,36 +307,36 @@ function killAllAntigravity() {
                     windowsHide: true,
                     timeout: 10000
                 });
-                log('taskkill 命令已执行');
+                log('taskkill Perintah operasional dikerjakan');
             } catch (e) {
-                // taskkill 在没有匹配进程时会返回非零退出码，这是正常的
-                log('taskkill 完成（可能没有运行中的进程）: ' + (e.message || ''));
+                // taskkill Sewaktu gagal jumpa pasangan proses akan setor nilai tidak-sifar, ini wajar
+                log('taskkill selesai (gak ada jg ga apa): ' + (e.message || ''));
             }
         } else {
-            // Linux/macOS: 使用 pkill
+            // Linux/macOS: Terapkan pkill
             try {
                 execSync('pkill -9 -i antigravity || true', { encoding: 'utf-8' });
-                log('pkill 命令已执行');
+                log('pkill Perintah operasional dikerjakan');
             } catch (e) {
-                log('pkill 完成: ' + (e.message || ''));
+                log('pkill Selesai: ' + (e.message || ''));
             }
         }
     } catch (e) {
-        log('关闭进程时发生错误: ' + (e.message || e));
+        log('Jumpa eror pas bunuh aplikasi proses: ' + (e.message || e));
     }
-    log('关闭进程命令已执行');
+    log('Instruksi tutup proses udah di ketok');
 }
 
-// === 等待进程完全退出 ===
+// === Menunggu santai agar proses benar tewas total ===
 async function waitForProcessExit(maxWaitSec = 30) {
-    log('等待 Antigravity IDE 进程退出...');
-    // 简化：直接等待固定时间，避免 execSync 在 VBScript 进程中卡住
-    log('等待 ' + maxWaitSec + ' 秒让进程完全退出...');
+    log('Menunggu kepergian Antigravity IDE...');
+    // Bikin simpel: ngaso durasi mutlak, cegah execSync mogok nyangkut pada sesi VBScript
+    log('Nunggu ' + maxWaitSec + ' detik buat exit paripurna...');
     await sleep(maxWaitSec * 1000);
-    log('等待完成，假设 IDE 进程已退出');
+    log('Nunggu kelar, IDE udah tewas minggat');
     return true;
 }
-// === Protobuf 编解码 ===
+// === Encoding/Decoding Protokol buffer ===
 function encodeVarint(v) {
     const buf = [];
     while (v >= 128) {
@@ -418,84 +418,84 @@ function createOldFormatField(at, rt, exp) {
     return encodeLenDelim(6, info);
 }
 
-// === 动态加载 sqlite3 ===
+// === Mamuat sqlite3 secara dinamis ===
 async function loadSqlite3() {
-    // 方法1: 尝试使用插件自带的 sqlite3
+    // Metode 1: Coba gunakan modul sqlite3 bawaan plugin
     try {
         module.paths.push(NODE_MODULES);
         const sqlite3 = require('sqlite3');
-        log('使用插件目录的 sqlite3 模块');
+        log('Menggunakan modul sqlite3 direktori plugin');
         return sqlite3;
     } catch (e) {
-        log('插件目录 sqlite3 加载失败: ' + (e.message || e));
+        log('Gagal memuat sqlite3 direktori plugin: ' + (e.message || e));
     }
 
-    // 方法2: 尝试使用系统全局的 sqlite3
+    // Metode 2: Coba gunakan modul sqlite3 global sistem
     try {
         const sqlite3 = require('sqlite3');
-        log('使用系统全局的 sqlite3 模块');
+        log('Menggunakan modul sqlite3 global sistem');
         return sqlite3;
     } catch (e) {
-        log('系统全局 sqlite3 不可用: ' + (e.message || e));
+        log('sqlite3 global sistem tidak tersedia: ' + (e.message || e));
     }
 
-    // 方法3: 在临时目录安装兼容版本
-    log('尝试在临时目录安装 sqlite3...');
+    // Metode 3: Instal versi yang kompatibel di direktori sementara
+    log('Mencoba menginstal sqlite3 di direktori sementara...');
     const tempSqliteDir = path.join(require('os').tmpdir(), 'ag_sqlite3_temp');
     
     try {
-        // 确保目录存在
+        // Memastikan direktori ada
         if (!fs.existsSync(tempSqliteDir)) {
             fs.mkdirSync(tempSqliteDir, { recursive: true });
         }
         
-        // 检查是否已经安装过
+        // Telusuri andai sdh terpasang dulu
         const tempNodeModules = path.join(tempSqliteDir, 'node_modules');
         if (fs.existsSync(path.join(tempNodeModules, 'sqlite3'))) {
-            log('发现已安装的临时 sqlite3，尝试加载...');
+            log('Menemukan sqlite3 sementara yang telah diinstal, mencoba memuat...');
             module.paths.unshift(tempNodeModules);
             try {
                 const sqlite3 = require('sqlite3');
-                log('临时目录 sqlite3 加载成功');
+                log('Berhasil memuat sqlite3 direktori sementara');
                 return sqlite3;
             } catch (loadErr) {
-                log('临时目录 sqlite3 加载失败，将重新安装: ' + loadErr.message);
-                // 删除旧的安装
+                log('Gagal memuat sqlite3 direktori sementara, akan diinstal ulang: ' + loadErr.message);
+                // Menghapus instalasi lama
                 fs.rmSync(tempNodeModules, { recursive: true, force: true });
             }
         }
         
-        // 创建 package.json
+        // Membuat package.json
         const pkgJson = { name: 'ag-sqlite-temp', version: '1.0.0', dependencies: { sqlite3: '^5.1.6' } };
         fs.writeFileSync(path.join(tempSqliteDir, 'package.json'), JSON.stringify(pkgJson));
         
-        // 执行 npm install
-        log('正在安装 sqlite3（这可能需要几分钟，请耐心等待）...');
+        // Menjalankan npm install
+        log('Sedang menginstal sqlite3 (membutuhkan beberapa menit, harap tunggu)...');
         execSync('npm install --prefer-offline --no-audit --no-fund', {
             cwd: tempSqliteDir,
             encoding: 'utf-8',
-            timeout: 300000, // 5分钟超时
+            timeout: 300000, // 5menit timeout
             windowsHide: true
         });
-        log('sqlite3 安装完成');
+        log('Instalasi sqlite3 selesai');
         
-        // 加载新安装的模块
+        // Memuat modul yang baru diinstal
         module.paths.unshift(tempNodeModules);
         const sqlite3 = require('sqlite3');
-        log('临时安装的 sqlite3 加载成功');
+        log('Berhasil memuat sqlite3 yang diinstal sementara');
         return sqlite3;
     } catch (installErr) {
-        log('sqlite3 安装失败: ' + (installErr.message || installErr));
-        throw new Error('无法加载 sqlite3 模块，请确保系统已安装 npm');
+        log('Gagal menginstal sqlite3: ' + (installErr.message || installErr));
+        throw new Error('Tidak dapat memuat modul sqlite3, pastikan npm sudah diinstal di sistem');
     }
 }
 
-// === 注入 Token ===
+// === Menginjeksikan Token ===
 async function injectToken() {
-    log('开始注入 Token 到数据库...');
+    log('Mulai menyuntikkan Token ke database...');
     
     if (!fs.existsSync(DB_PATH)) {
-        log('错误: 数据库文件不存在: ' + DB_PATH);
+        log('Kesalahan: File database tidak ada: ' + DB_PATH);
         return false;
     }
     
@@ -503,12 +503,12 @@ async function injectToken() {
         try {
             const backupPath = DB_PATH + '.ag-backup-' + Date.now();
             fs.copyFileSync(DB_PATH, backupPath);
-            log('已创建数据库备份: ' + backupPath);
+            log('Cadangan database telah dibuat: ' + backupPath);
         } catch (e) {
-            log('创建数据库备份失败（将继续尝试注入）: ' + (e.message || e));
+            log('Gagal membuat cadangan database (akan terus menyuntikkan): ' + (e.message || e));
         }
 
-        // 动态加载 sqlite3（带备用方案）
+        // Muat sqlite secara dinamis (beserta rencana cadangan)
         const sqlite3 = await loadSqlite3();
         
         return new Promise((resolve, reject) => {
@@ -518,7 +518,7 @@ async function injectToken() {
             const KEY_ONBOARD = 'antigravityOnboarding';
             
             db.serialize(() => {
-                // 1. 新格式注入
+                // 1. Injeksi format baru
                 try {
                     const oauthInfo = createOAuthInfo(ACCESS_TOKEN, REFRESH_TOKEN, EXPIRY);
                     const oauthInfoB64 = oauthInfo.toString('base64');
@@ -529,17 +529,17 @@ async function injectToken() {
                     const outerB64 = outer.toString('base64');
                     
                     db.run("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)", [KEY_NEW, outerB64], (err) => {
-                        if (err) log('新格式注入失败: ' + err.message);
-                        else log('新格式注入成功');
+                        if (err) log('Injeksi format baru gagal: ' + err.message);
+                        else log('Injeksi format baru berhasil');
                     });
                 } catch (e) {
-                    log('新格式注入异常: ' + e.message);
+                    log('Pengecualian injeksi format baru: ' + e.message);
                 }
 
-                // 2. 旧格式注入
+                // 2. Injeksi format lama
                 db.get("SELECT value FROM ItemTable WHERE key = ?", [KEY_OLD], (err, row) => {
                     if (err || !row) {
-                        log('旧格式跳过: ' + (err ? err.message : 'key 不存在'));
+                        log('Lewati format lama: ' + (err ? err.message : 'kunci tidak ada'));
                     } else {
                         try {
                             const blob = Buffer.from(row.value, 'base64');
@@ -552,16 +552,16 @@ async function injectToken() {
                             const finalB64 = Buffer.concat([clean, emailField, tokenField]).toString('base64');
                             
                             db.run("UPDATE ItemTable SET value = ? WHERE key = ?", [finalB64, KEY_OLD], (err) => {
-                                if (err) log('旧格式注入失败: ' + err.message);
-                                else log('旧格式注入成功');
+                                if (err) log('Injeksi format lama gagal: ' + err.message);
+                                else log('Injeksi format lama berhasil');
                             });
                         } catch (e) {
-                            log('旧格式注入异常: ' + e.message);
+                            log('Pengecualian injeksi format lama: ' + e.message);
                         }
                     }
                 });
 
-                // 3. Onboarding 标记
+                // 3. Tanda orientasi
                 db.run("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)", [KEY_ONBOARD, "true"], (err) => {
                     db.close();
                     resolve(true);
@@ -569,62 +569,62 @@ async function injectToken() {
             });
         });
     } catch (e) {
-        log('注入流程异常: ' + e.message);
+        log('Pengecualian proses injeksi: ' + e.message);
         return false;
     }
 }
 
-// === 启动 IDE ===
+// === Nyalakan IDE ===
 function startIDE() {
-    log('正在启动 Antigravity IDE...');
+    log('Menyalakan Antigravity IDE...');
     
     try {
         if (PLATFORM === 'win32') {
-            // 优先使用配置覆盖的路径
+            // Mengutamakan konfigurasi jalur prasetel
             let exePath = EXE_PATH_OVERRIDE.win32 && EXE_PATH_OVERRIDE.win32.trim() 
                 ? EXE_PATH_OVERRIDE.win32.trim() 
                 : path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Antigravity', 'Antigravity.exe');
             
             log('LOCALAPPDATA: ' + (process.env.LOCALAPPDATA || ''));
-            log('使用的 IDE 路径: ' + exePath);
-            log('路径是否存在: ' + fs.existsSync(exePath));
+            log('Jalur IDE yang digunakan: ' + exePath);
+            log('Apakah jalur ada: ' + fs.existsSync(exePath));
 
-            // 方法1: 先尝试用协议启动（等价于你在资源管理器运行 antigravity://）
-            // 方法1: 先尝试用协议启动（等价于你在资源管理器运行 antigravity://）
+            // Metode 1: Coba gunakan protokol (setara dengan menjalankan via explorer antigravity://)
+            // Metode 1: Coba gunakan protokol (setara dengan menjalankan via explorer antigravity://)
             const release = require('os').release();
             let isWin11 = false;
             try {
                 const release = require('os').release();
                 const build = parseInt(release.split('.')[2] || '0');
                 isWin11 = build >= 22000;
-                log('Windows 版本: ' + release + (isWin11 ? ' (Win11+)' : ' (Win10 or older)'));
+                log('Windows Versi: ' + release + (isWin11 ? ' (Win11+)' : ' (Win10 or older)'));
             } catch (verErr) {
-                log('版本检测失败，默认为非 Win11: ' + verErr.message);
+                log('VersiGagal deteksi, anggap bukan Win11: ' + verErr.message);
                 isWin11 = false;
             }
 
             if (isWin11) {
-                log('尝试方法1: 使用 explorer antigravity:// 启动 IDE');
+                log('Coba Metode 1: pake explorer panggil IDENya via URI');
                 try {
                     const result1 = require('child_process').execSync(
                         'explorer antigravity://',
                         { encoding: 'utf-8', timeout: 10000 }
                     );
-                    log('方法1 执行成功，输出: ' + (result1 || '(无输出)'));
+                    log('Metode 1 berhasil, keluaran: ' + (result1 || '(tanpa keluaran)'));
                     return true;
                 } catch (e1) {
-                    log('方法1 失败: ' + (e1.message || e1));
+                    log('Metode 1 gagal: ' + (e1.message || e1));
                 }
             } else {
-                log('Win10 兼容模式: 跳过协议启动，直接尝试方法2 (spawn exe)');
+                log('Mode Win10: Lewati protokol, abaikan coba Metode 2 langsung (spawn exe)');
             }
 
-            // 方法2: 如果知道 exe 路径，直接拉起进程
+            // Metode 2: jika jalur exe diketahui, jalankan proses
             if (exePath && fs.existsSync(exePath)) {
-                log('尝试方法2: spawn 直接启动 Antigravity.exe');
+                log('Coba Metode 2: spawn luncurkan langsung Antigravity.exe');
                 
-                // 关键修复：清理环境变量，防止污染新进程
-                // 避免继承当前 VS Code 的 IPC 句柄、WebView 状态等
+                // Perbaikan kunci: Bersihkan variabel lingkungan, cegah polusi proses baru
+                // Hindari pewarisan IPC VS Code saat ini, status WebView, dll
                 const cleanEnv = { ...process.env };
                 Object.keys(cleanEnv).forEach(key => {
                     if (key.startsWith('VSCODE_') || key.startsWith('ELECTRON_')) {
@@ -635,37 +635,37 @@ function startIDE() {
                 const child = require('child_process').spawn(exePath, [], {
                     detached: true,
                     stdio: 'ignore',
-                    env: cleanEnv // 使用干净的环境变量
+                    env: cleanEnv // Pakai variabel lingkungan yang steril
                 });
                 child.unref();
-                log('方法2 spawn 创建成功，PID: ' + child.pid);
-                log('IDE 启动指令已发送');
+                log('Spawn Metode 2 sukses, PID: ' + child.pid);
+                log('Perintah mulai IDE telah dikirim');
                 return true;
             } else {
-                log('方法2 失败: 找不到可执行文件路径');
+                log('Metode 2 gagal: path executable tidak ditemukan');
             }
 
-            log('Windows 上所有启动方法都失败了!');
+            log('Semua metode di jalankan di Windows gagal!');
             return false;
             
         } else if (PLATFORM === 'darwin') {
-            // macOS: 优先使用配置覆盖的路径
+            // macOS: Mengutamakan konfigurasi jalur prasetel
             let appPath = EXE_PATH_OVERRIDE.darwin && EXE_PATH_OVERRIDE.darwin.trim()
                 ? EXE_PATH_OVERRIDE.darwin.trim()
                 : '/Applications/Antigravity.app';
             
-            log('使用的 macOS App 路径: ' + appPath);
+            log('Path aplikasi macOS yang dipakai: ' + appPath);
             if (fs.existsSync(appPath)) {
                 execSync(\`open "\${appPath}"\`);
-                log('通过 App 路径启动成功');
+                log('Mulai sukses via jalur App');
                 return true;
             }
-            log('App 路径不存在，尝试协议启动');
+            log('Jalur App tidak ada, coba inisiasi protokol');
             execSync('open antigravity://');
             return true;
             
         } else {
-            // Linux: 优先使用配置覆盖的路径
+            // Linux: Mengutamakan konfigurasi jalur prasetel
             const possiblePaths = [];
             if (EXE_PATH_OVERRIDE.linux && EXE_PATH_OVERRIDE.linux.trim()) {
                 possiblePaths.push(EXE_PATH_OVERRIDE.linux.trim());
@@ -676,79 +676,79 @@ function startIDE() {
                 path.join(process.env.HOME || '', '.local/bin/antigravity')
             );
             
-            log('Linux 尝试路径: ' + possiblePaths.join(', '));
+            log('Coba jalur-jalur Linux:: ' + possiblePaths.join(', '));
             for (const p of possiblePaths) {
                 if (fs.existsSync(p)) {
-                    log('找到可执行文件: ' + p);
+                    log('Di temukan file dapat dieksekusi: ' + p);
                     spawn(p, [], { detached: true, stdio: 'ignore' }).unref();
                     return true;
                 }
             }
             
-            // 尝试 xdg-open
-            log('未找到可执行文件，尝试协议启动');
+            // Menerapkan xdg-open
+            log('Tak dijumpai executable, coba urus via protokol');
             try {
                 execSync('xdg-open antigravity://');
                 return true;
             } catch (e) {
-                log('Linux 启动失败: ' + e.message);
+                log('Awal jalankan Linux menemui kegagalan: ' + e.message);
             }
         }
     } catch (e) {
-        log('启动 IDE 失败: ' + e.message);
+        log('Gagal urupkan IDE: ' + e.message);
     }
     
     return false;
 }
 
-// === 主流程 ===
+// === Proses utama ===
 async function main() {
     log('========================================');
-    log('Antigravity Multi-Account Cockpit 账号切换代理启动');
-    log('平台: ' + PLATFORM);
-    log('数据库: ' + DB_PATH);
+    log('Antigravity Multi-Account Cockpit Switch proksi penggantian akun aktif');
+    log('Platform: ' + PLATFORM);
+    log('Basis data: ' + DB_PATH);
     log('========================================');
     
-    // 1. 先等待让 VS Code 发出 quit 命令
+    // 1. Harap menanti agar VS Code menerbitkan perintah keluar
     const initialWait = Math.max(2, Math.floor(PROCESS_WAIT_SECONDS / 5));
-    log('等待 ' + initialWait + ' 秒让主进程发送退出命令...');
+    log('Nunggu ' + initialWait + ' detik tuk proses main sampaikan instruksi matikan...');
     await sleep(initialWait * 1000);
     
-    // 2. 主动强制关闭所有 Antigravity 进程
+    // 2. Inisiatif cabut paksa tiap proses dari Antigravity
     killAllAntigravity();
     
-    // 3. 等待 IDE 进程完全退出
+    // 3. Persiapan mengheningkan proses IDE dengan paripurna
     const exitWait = Math.max(5, Math.floor(PROCESS_WAIT_SECONDS / 2));
     await waitForProcessExit(exitWait);
     
-    // 4. 额外等待确保文件锁释放
+    // 4. Sela waktu lebih buat pastikan file lock terbebaskan
     const releaseWait = Math.max(3, Math.floor(PROCESS_WAIT_SECONDS / 3));
-    log('等待 ' + releaseWait + ' 秒确保资源完全释放...');
+    log('Nunggu ' + releaseWait + ' detik tuk meyakinkan pembebasan riles seutuhnya...');
     await sleep(releaseWait * 1000);
     
-    // 3. 注入 Token
+    // 3. Menginjeksikan Token
     const injected = await injectToken();
     if (!injected) {
-        log('注入失败，终止流程');
+        log('Injeksi gugur, urutan berhenti');
         process.exit(1);
     }
     
-    // 4. 等待一下确保写入完成
+    // 4. Jeda singgah pastikan tuntasnya pencatatan
     await sleep(1000);
     
-    // 5. 启动 IDE
+    // 5. Nyalakan IDE
     const started = startIDE();
     if (started) {
-        log('IDE 启动指令已发送');
+        log('Perintah mulai IDE telah dikirim');
     } else {
-        log('IDE 启动失败，请手动打开 Antigravity');
+        log('IDE Kandas nyalakan, coba buka manual si Antigravity');
     }
     
     log('========================================');
-    log('账号切换流程完成');
+    log('Rute perpindahan akun khatam');
     log('========================================');
     
-    // 清理自身
+    // Membenahi diri
     await sleep(2000);
     try {
         fs.unlinkSync(${JSON.stringify(mainScriptPath)});
@@ -758,23 +758,23 @@ async function main() {
 }
 
 main().catch(e => {
-    log('致命错误: ' + e.message);
+    log('Bencana maut (Fatal Error): ' + e.message);
     process.exit(1);
 });
 `;
 
-        // 写入主脚本
+        // Mematri instruksi skrip pokok
         fs.writeFileSync(mainScriptPath, mainScriptContent, 'utf-8');
 
-        // 根据平台启动独立进程
+        // Sesuai dengan platform bangun proses singlenya
         if (platform === 'win32') {
-            // Windows: 使用 VBScript 包装确保完全独立
+            // Windows: Bungkus gunakan VBScript bagi tangguhkan otonomi penuh
             const vbsPath = path.join(tempDir, `ag_launch_${timestamp}.vbs`);
-            // VBScript 不需要对路径中的反斜杠进行 JavaScript 风格的双转义
+            // VBScript Gak usah lolos ganda cara JavaScript tangani alur back-slash
             const nodeExeVbs = nodeExe;
             const scriptPathVbs = mainScriptPath;
-            // 使用 0 = 隐藏窗口，避免弹出控制台界面
-            // 调试建议：如果怀疑脚本未运行，可暂时将 0 改为 1 以显示窗口
+            // Aktif 0 = jendelany ghoib, singkirkan letupan panel command
+            // Hint run-time: ragu program jalan? rubah nilai 0 ganti 1 buat intip isinya
             const vbsContent = `Set WshShell = CreateObject("WScript.Shell")
 WshShell.Run Chr(34) & "${nodeExeVbs}" & Chr(34) & " " & Chr(34) & "${scriptPathVbs}" & Chr(34), 0, False
 `;
@@ -788,7 +788,7 @@ WshShell.Run Chr(34) & "${nodeExeVbs}" & Chr(34) & " " & Chr(34) & "${scriptPath
             child.unref();
 
         } else {
-            // Linux/macOS: 使用 nohup + setsid 确保独立
+            // Linux/macOS: Pakai nohup + setsid amankan jalan mardeka
             const shellCmd = `nohup "${nodeExe}" "${mainScriptPath}" > "${logPath}" 2>&1 &`;
 
             spawn('sh', ['-c', shellCmd], {

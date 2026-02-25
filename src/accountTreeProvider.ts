@@ -38,7 +38,7 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountItem 
                 }
 
                 // Check if token needs refresh
-                let token = account.token;
+                const token = account.token;
                 if (Date.now() / 1000 > token.expiry_timestamp - 300) {
                     const refreshed = await AccountManager.refreshToken(token.refresh_token);
                     token.access_token = refreshed.accessToken;

@@ -32,7 +32,7 @@ export class DBManager {
             const KEY_NEW = "antigravityUnifiedStateSync.oauthToken";
             const KEY_ONBOARD = DB_KEY_ONBOARDING;
 
-            // 1. 新格式注入
+            // 1. Injeksi format baru
             try {
                 const oauthInfo = this.createOAuthInfo(accessToken, refreshToken, expiry);
                 const oauthInfoB64 = oauthInfo.toString('base64');
@@ -47,7 +47,7 @@ export class DBManager {
                 console.error('New format injection failed', e);
             }
 
-            // 2. 旧格式注入
+            // 2. Injeksi format lama
             const row: any = await get("SELECT value FROM ItemTable WHERE key = ?", [KEY_OLD]);
             if (row) {
                 const blob = Buffer.from(row.value, 'base64');
@@ -62,7 +62,7 @@ export class DBManager {
                 await run("UPDATE ItemTable SET value = ? WHERE key = ?", [finalB64, KEY_OLD]);
             }
 
-            // 3. Onboarding 标记
+            // 3. Tanda Onboarding
             await run("INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)", [KEY_ONBOARD, "true"]);
 
         } finally {
@@ -111,10 +111,10 @@ export class DBManager {
                 return null;
             }
 
-            // 1. 外层
+            // 1. Lapisan luar
             const outerProto = Buffer.from(row.value, 'base64');
 
-            // 简易 protobuf reader (支持到 32位 整数)
+            // Pembaca protobuf sederhana (mendukung integer hingga 32-bit)
             const readVarint = (buf: Buffer, off: number): [number, number] => {
                 let res = 0, shift = 0;
                 while (off < buf.length) {
@@ -126,7 +126,7 @@ export class DBManager {
                 return [res, off];
             };
 
-            // 2. 寻找 Inner (Field 1)
+            // 2. Mencari Inner (Field 1)
             let innerProto: Buffer | null = null;
             let offset = 0;
             while (offset < outerProto.length) {
@@ -150,7 +150,7 @@ export class DBManager {
             }
             if (!innerProto) return null;
 
-            // 3. 寻找 B64_OAuthInfo (Field 2)
+            // 3. Mencari B64_OAuthInfo (Field 2)
             let oauthInfoB64Str: string | null = null;
             offset = 0;
             while (offset < innerProto.length) {
@@ -170,11 +170,11 @@ export class DBManager {
             }
             if (!oauthInfoB64Str) return null;
 
-            // 4. 解析 OAuthInfo
+            // 4. Mengurai OAuthInfo
             const oauthInfo = Buffer.from(oauthInfoB64Str, 'base64');
             let accessToken: string | null = null;
             let refreshToken: string | null = null;
-            let expiry: number = 0;
+            let expiry = 0;
 
             offset = 0;
             while (offset < oauthInfo.length) {
@@ -192,7 +192,7 @@ export class DBManager {
                 } else if (fieldNum === 4) { // Expiry (Timestamp)
                     const [len, off2] = readVarint(oauthInfo, off1);
                     const tsMsg = oauthInfo.subarray(off2, off2 + len);
-                    // 解析 Timestamp { seconds: 1 }
+                    // Mengurai Timestamp { seconds: 1 }
                     let tsOff = 0;
                     while (tsOff < tsMsg.length) {
                         const [tsTag, tsOff1] = readVarint(tsMsg, tsOff);
